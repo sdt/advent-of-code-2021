@@ -17,38 +17,14 @@ func main() {
 }
 
 func part1(filename string) {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	started := false
-	increases := 0
-	var prev int
-
-	for scanner.Scan() {
-		curr, err := strconv.Atoi(scanner.Text())
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if started {
-			if curr > prev {
-				increases++
-			}
-		} else {
-			started = true
-		}
-		prev = curr
-	}
-
-	fmt.Println(increases)
+	fmt.Println(getIncreases(filename, 1))
 }
 
 func part2(filename string) {
+	fmt.Println(getIncreases(filename, 3))
+}
+
+func getIncreases(filename string, windowSize int) int {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -56,10 +32,8 @@ func part2(filename string) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-
-	const windowSize = 3
 	count := 0
-	var window [windowSize]int
+	window := make([]int, windowSize)
 	increases := 0
 
 	for scanner.Scan() {
@@ -78,5 +52,5 @@ func part2(filename string) {
 		window[count % windowSize] = curr
 	}
 
-	fmt.Println(increases)
+	return increases
 }
