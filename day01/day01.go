@@ -12,45 +12,42 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatal("usage: ", os.Args[0], " input-file")
 	}
-	part1(os.Args[1])
-	part2(os.Args[1])
-}
 
-func part1(filename string) {
-	fmt.Println(getIncreases(filename, 1))
-}
-
-func part2(filename string) {
-	fmt.Println(getIncreases(filename, 3))
-}
-
-func getIncreases(filename string, windowSize int) int {
-	file, err := os.Open(filename)
+	depths, err := getDepths(os.Args[1])
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	fmt.Println(getIncreases(depths, 1))
+	fmt.Println(getIncreases(depths, 3))
+}
+
+func getDepths(filename string) ([]int, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	count := 0
-	window := make([]int, windowSize)
-	increases := 0
-
+	depths := make([]int, 0)
 	for scanner.Scan() {
-		curr, err := strconv.Atoi(scanner.Text())
+		depth, err := strconv.Atoi(scanner.Text())
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-
-		count++
-		if count > windowSize {
-			prev := window[count % windowSize]
-			if curr > prev {
-				increases++
-			}
-		}
-		window[count % windowSize] = curr
+		depths = append(depths, depth)
 	}
+	return depths, nil
+}
 
+func getIncreases(depths []int, windowSize int) int {
+	increases := 0
+	for i, after := range depths[windowSize:] {
+		before := depths[i]
+		if after > before {
+			increases++
+		}
+	}
 	return increases
 }
