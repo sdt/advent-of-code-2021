@@ -15,6 +15,7 @@ func main() {
 	}
 
 	fmt.Println(part1(os.Args[1]))
+	fmt.Println(part2(os.Args[1]))
 }
 
 func part1(filename string) int {
@@ -42,6 +43,38 @@ func part1(filename string) int {
 			depth += count
 		case "up":
 			depth -= count
+		}
+	}
+	return depth * pos
+}
+
+func part2(filename string) int {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	depth := 0
+	pos := 0
+	aim := 0
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		words := strings.Split(scanner.Text(), " ")
+		count, err := strconv.Atoi(words[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		switch words[0] {
+		case "forward":
+			pos += count
+			depth += aim * count
+		case "down":
+			aim += count
+		case "up":
+			aim -= count
 		}
 	}
 	return depth * pos
