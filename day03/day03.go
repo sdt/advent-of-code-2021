@@ -14,14 +14,20 @@ func main() {
 	}
 
 	reports, width := getReports(os.Args[1])
+	gamma := getMostCommonBits(reports, width)
 
-	fmt.Println(part1(reports, width))
+	fmt.Println(part1(gamma, width))
 	//fmt.Println(getIncreases(depths, 3))
 }
 
-func part1(reports []int, width int) int {
+func part1(gamma int, width int) int {
+	mask := (1 << width) - 1
+	epsilon := ^gamma & mask
+	return gamma * epsilon
+}
+
+func getMostCommonBits(reports []int, width int) int {
 	gamma := 0
-	epsilon := 0
 	for bit := 0; bit < width; bit++ {
 		mask := 1 << bit
 		sense := 0
@@ -35,12 +41,10 @@ func part1(reports []int, width int) int {
 
 		if sense >= 0 {
 			gamma |= mask
-		} else {
-			epsilon |= mask
 		}
 	}
 
-	return gamma * epsilon
+	return gamma
 }
 
 func getReports(filename string) ([]int, int) {
