@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -12,53 +13,63 @@ func main() {
 		log.Fatal("usage: ", os.Args[0], " input-file")
 	}
 
-	reports, err := getReports(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
+	reports, width := getReports(os.Args[1])
 
-	fmt.Println(part1(reports))
+	fmt.Println(part1(reports, width))
 	//fmt.Println(getIncreases(depths, 3))
 }
 
-func part1(reports []string) int {
-	bits := len(reports[0])
-	senses := make([]int, bits)
-	for _, report := range reports {
-		for i, bit := range report {
-			if bit == '0' {
-				senses[i]--
-			} else {
-				senses[i]++
-			}
-		}
-	}
-
+func part1(reports []int, width int) int {
 	gamma := 0
 	epsilon := 0
-	for i, sense := range senses {
-		value := 1 << (bits - i - 1)
-		if sense > 0 {
-			gamma |= value
+	for bit := 0; bit < width; bit++ {
+		mask := 1 << bit
+		sense := 0
+		for _, report := range reports {
+			if report & mask != 0 {
+				sense++
+			} else {
+				sense--
+			}
+		}
+
+		if sense >= 0 {
+			gamma |= mask
 		} else {
-			epsilon |= value
+			epsilon |= mask
 		}
 	}
 
 	return gamma * epsilon
 }
 
-func getReports(filename string) ([]string, error) {
+func getReports(filename string) ([]int, int) {
+	lines := getInput(filename)
+	reports := make([]int, 0)
+
+	for _, line := range lines {
+		report, err := strconv.ParseInt(line, 2, 32)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		reports = append(reports, int(report))
+	}
+
+	return reports, len(lines[0])
+}
+
+func getInput(filename string) []string {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	reports := make([]string, 0)
+	lines := make([]string, 0)
 	for scanner.Scan() {
-		reports = append(reports, scanner.Text())
+		lines = append(lines, scanner.Text())
 	}
-	return reports, nil
+	return lines
 }
