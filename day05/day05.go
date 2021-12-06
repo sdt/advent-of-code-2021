@@ -29,13 +29,32 @@ func main() {
 	lines := parse(os.Args[1])
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []Line) int {
 	ocean := make(Ocean)
 
 	for _, line := range lines {
-		line.trace(ocean)
+		line.trace(ocean, false)
+	}
+
+	total := 0
+	for _, count := range ocean {
+		if count > 1 {
+			total++
+		}
+	}
+	//fmt.Println(ocean)
+
+	return total
+}
+
+func part2(lines []Line) int {
+	ocean := make(Ocean)
+
+	for _, line := range lines {
+		line.trace(ocean, true)
 	}
 
 	total := 0
@@ -62,6 +81,12 @@ func (line* Line) trace(ocean Ocean, withDiag bool) {
 	} else if dx == 0 {
 		for i := 0; i <= ny; i++ {
 			ocean[p]++
+			p.y += dy
+		}
+	} else if (withDiag) {
+		for i := 0; i <= nx; i++ {
+			ocean[p]++
+			p.x += dx
 			p.y += dy
 		}
 	}
