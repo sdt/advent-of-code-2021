@@ -11,7 +11,9 @@ import (
 )
 
 const Size = 5
+
 var WhiteSpace = regexp.MustCompile(" +")
+
 const Mark = 0x80000000
 
 type Board struct {
@@ -32,15 +34,30 @@ func main() {
 	bingo := parseBingo(getInputLines(os.Args[1]))
 
 	fmt.Println(part1(bingo))
+	fmt.Println(part2(bingo))
 }
 
 func part1(bingo Bingo) int {
 	for _, drawn := range bingo.draw {
 		//fmt.Printf("Playing %d\n", drawn)
 		for _, board := range bingo.boards {
-			if board.mark(drawn) {
+			if board.mark(drawn) && board.isComplete() {
 				//fmt.Printf("Board %d has a %d: %v\n", i, drawn, board)
-				if board.isComplete() {
+				return drawn * board.incompleteCellSum()
+			}
+		}
+	}
+	return 0
+}
+
+func part2(bingo Bingo) int {
+	stillToWin := len(bingo.boards)
+	for _, drawn := range bingo.draw {
+		//fmt.Printf("Playing %d\n", drawn)
+		for i, board := range bingo.boards {
+			if board != nil && board.mark(drawn) && board.isComplete() {
+				bingo.boards[i] = nil
+				if stillToWin--; stillToWin == 0 {
 					return drawn * board.incompleteCellSum()
 				}
 			}
@@ -54,7 +71,7 @@ func parseBingo(lines []string) Bingo {
 	bingo := Bingo{draw: parseDraw(lines[0]), boards: make([]*Board, numBoards)}
 
 	for i := 0; i < numBoards; i++ {
-		firstLine := i * (Size+1) + 2
+		firstLine := i*(Size+1) + 2
 		lastLine := firstLine + Size
 		bingo.boards[i] = parseBoard(lines[firstLine:lastLine])
 	}
@@ -82,7 +99,7 @@ func (board *Board) incompleteCellSum() int {
 	for row := 0; row < Size; row++ {
 		for col := 0; col < Size; col++ {
 			value := board.cells[row][col]
-			if value & Mark == 0 {
+			if value&Mark == 0 {
 				sum += value
 			}
 		}
@@ -102,7 +119,7 @@ func (board *Board) isComplete() bool {
 func (board *Board) isRowComplete(row int) bool {
 	for col := 0; col < Size; col++ {
 		value := board.cells[row][col]
-		if value & Mark == 0 {
+		if value&Mark == 0 {
 			return false
 		}
 	}
@@ -112,7 +129,7 @@ func (board *Board) isRowComplete(row int) bool {
 func (board *Board) isColComplete(col int) bool {
 	for row := 0; row < Size; row++ {
 		value := board.cells[row][col]
-		if value & Mark == 0 {
+		if value&Mark == 0 {
 			return false
 		}
 	}
