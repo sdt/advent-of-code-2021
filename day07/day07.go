@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+type FuelFunction func(int) int
+
 func main() {
 	if len(os.Args) != 2 {
 		log.Fatal("usage: ", os.Args[0], " input-file")
@@ -22,30 +24,19 @@ func main() {
 }
 
 func part1(positions []int) int {
-	min := math.MaxInt
-	max := math.MinInt
-
-	for _, position := range positions {
-		if position < min {
-			min = position
-		}
-		if position > max {
-			max = position
-		}
-	}
-
-	leastTotal := math.MaxInt
-
-	for dest := min; dest <= max; dest++ {
-		total := getTotalMovement(positions, dest)
-		if total < leastTotal {
-			leastTotal = total
-		}
-	}
-	return leastTotal
+	return getLeastFuel(positions, func(dist int) int {
+		return abs(dist)
+	})
 }
 
 func part2(positions []int) int {
+	return getLeastFuel(positions, func(dist int) int {
+		dist = abs(dist)
+		return (dist*dist + dist) / 2
+	})
+}
+
+func getLeastFuel(positions []int, getFuel FuelFunction) int {
 	min := math.MaxInt
 	max := math.MinInt
 
@@ -61,33 +52,15 @@ func part2(positions []int) int {
 	leastTotal := math.MaxInt
 
 	for dest := min; dest <= max; dest++ {
-		total := getTotalFuel(positions, dest)
+		total := 0
+		for _, position := range positions {
+			total += getFuel(position - dest)
+		}
 		if total < leastTotal {
 			leastTotal = total
 		}
 	}
 	return leastTotal
-}
-
-func getTotalFuel(positions []int, dest int) int {
-	total := 0
-	for _, position := range positions {
-		total += fuel(position - dest)
-	}
-	return total
-}
-
-func fuel(x int) int {
-	x = abs(x)
-	return (x * x + x) / 2
-}
-
-func getTotalMovement(positions []int, dest int) int {
-	total := 0
-	for _, position := range positions {
-		total += abs(position - dest)
-	}
-	return total
 }
 
 func abs(x int) int {
