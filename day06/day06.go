@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var memo map[int]int = make(map[int]int)
+var memo [500]int
 
 func main() {
 	if len(os.Args) != 2 {
@@ -39,7 +39,10 @@ func part2(filename string) int {
 }
 
 func totalFish(days int) int {
-	if count, found := memo[days]; found {
+	if days < 0 {
+		return 1
+	}
+	if count := memo[days]; count > 0 {
 		return count
 	}
 	count := 1
