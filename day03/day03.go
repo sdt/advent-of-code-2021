@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bufio"
+	"advent-of-code/common"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 )
 
@@ -17,11 +16,8 @@ const (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("usage: ", os.Args[0], " input-file")
-	}
-
-	reports, width := getReports(os.Args[1])
+	filename := common.GetFilename()
+	reports, width := getReports(filename)
 
 	fmt.Println(part1(reports, width))
 	fmt.Println(part2(reports, width))
@@ -106,32 +102,14 @@ func getMostCommonBits(reports []int, bit int) MostCommonBits {
 }
 
 func getReports(filename string) ([]int, int) {
-	lines := getInput(filename)
+	lines := common.GetInputLines(filename)
 	reports := make([]int, 0)
 
 	for _, line := range lines {
 		report, err := strconv.ParseInt(line, 2, 32)
-		if err != nil {
-			log.Fatal(err)
-		}
-
+		common.CheckErr(err)
 		reports = append(reports, int(report))
 	}
 
 	return reports, len(lines[0])
-}
-
-func getInput(filename string) []string {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lines := make([]string, 0)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines
 }

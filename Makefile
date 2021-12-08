@@ -4,6 +4,9 @@ build:
 clean:
 	for i in day* ; do ( cd $$i; echo "--> $$i"; go clean ); done
 
+fmt:
+	for i in day* ; do ( cd $$i; echo "--> $$i"; go fmt ); done
+
 # eg. make run INPUT=example01.txt
 INPUT := input.txt
 run:

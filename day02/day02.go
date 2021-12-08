@@ -1,13 +1,29 @@
 package main
 
 import (
-	"bufio"
+	"advent-of-code/common"
 	"fmt"
-	"log"
-	"os"
-	"strconv"
 	"strings"
 )
+
+func main() {
+	filename := common.GetFilename()
+	lines := common.GetInputLines(filename)
+
+	p1 := newPart1()
+	p2 := newPart2()
+
+	for _, line := range lines {
+		words := strings.Split(line, " ")
+		count := common.ParseInt(words[1])
+
+		p1.update(words[0], count)
+		p2.update(words[0], count)
+	}
+
+	fmt.Println(p1.value())
+	fmt.Println(p2.value())
+}
 
 type part1 struct {
 	depth int
@@ -57,34 +73,4 @@ func (p *part2) update(command string, arg int) {
 
 func (p *part2) value() int {
 	return p.pos * p.depth
-}
-
-func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("usage: ", os.Args[0], " input-file")
-	}
-
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-
-	p1 := newPart1()
-	p2 := newPart2()
-
-	for scanner.Scan() {
-		words := strings.Split(scanner.Text(), " ")
-		count, err := strconv.Atoi(words[1])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		p1.update(words[0], count)
-		p2.update(words[0], count)
-	}
-
-	fmt.Println(p1.value())
-	fmt.Println(p2.value())
 }

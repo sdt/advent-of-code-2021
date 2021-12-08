@@ -1,23 +1,17 @@
 package main
 
 import (
-	"bufio"
+	"advent-of-code/common"
 	"fmt"
-	"log"
-	"os"
-	"strconv"
 	"strings"
 )
 
 var memo [500]int
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("usage: ", os.Args[0], " input-file")
-	}
-
-	fmt.Println(part1(os.Args[1]))
-	fmt.Println(part2(os.Args[1]))
+	filename := common.GetFilename()
+	fmt.Println(part1(filename))
+	fmt.Println(part2(filename))
 }
 
 func part1(filename string) int {
@@ -56,30 +50,7 @@ func totalFish(days int) int {
 }
 
 func getInput(filename string) []int {
-	words := strings.Split(getInputLines(filename)[0], ",")
-
-	startCycles := make([]int, len(words))
-	for i, word := range words {
-		value, err := strconv.Atoi(word)
-		if err != nil {
-			log.Fatal(err)
-		}
-		startCycles[i] = value
-	}
-	return startCycles
-}
-
-func getInputLines(filename string) []string {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lines := make([]string, 0)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines
+	lines := common.GetInputLines(filename)
+	words := strings.Split(lines[0], ",")
+	return common.ParseInts(words)
 }

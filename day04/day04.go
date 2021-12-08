@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bufio"
+	"advent-of-code/common"
 	"fmt"
-	"log"
-	"os"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -27,11 +24,8 @@ type Bingo struct {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("usage: ", os.Args[0], " input-file")
-	}
-
-	bingo := parseBingo(getInputLines(os.Args[1]))
+	filename := common.GetFilename()
+	bingo := parseBingo(common.GetInputLines(filename))
 
 	fmt.Println(part1(bingo))
 	fmt.Println(part2(bingo))
@@ -84,11 +78,7 @@ func parseBoard(lines []string) *Board {
 	for row, line := range lines {
 		line = strings.TrimSpace(line)
 		for col, word := range WhiteSpace.Split(line, -1) {
-			value, err := strconv.Atoi(word)
-			if err != nil {
-				log.Fatal(err)
-			}
-			board.cells[row][col] = value
+			board.cells[row][col] = common.ParseInt(word)
 		}
 	}
 	return &board
@@ -149,28 +139,5 @@ func (board *Board) mark(number int) bool {
 }
 
 func parseDraw(line string) Draw {
-	draw := make([]int, 0)
-	for _, number := range strings.Split(line, ",") {
-		value, err := strconv.Atoi(number)
-		if err != nil {
-			log.Fatal(err)
-		}
-		draw = append(draw, value)
-	}
-	return draw
-}
-
-func getInputLines(filename string) []string {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lines := make([]string, 0)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines
+	return common.ParseInts(strings.Split(line, ","))
 }
