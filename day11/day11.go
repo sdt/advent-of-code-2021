@@ -16,9 +16,9 @@ type Point struct {
 
 func main() {
 	filename := common.GetFilename()
-	grid := parseGrid(filename)
 
-	fmt.Println(part1(grid, 100))
+	fmt.Println(part1(parseGrid(filename), 100))
+	fmt.Println(part2(parseGrid(filename)))
 }
 
 func part1(g Grid, steps int) int {
@@ -31,12 +31,22 @@ func part1(g Grid, steps int) int {
 	return flashes
 }
 
-func (g* Grid) doStep() int {
+func part2(g Grid) int {
+	all := g.rows * g.cols
+	for step := 0; ; step++ {
+		flashes := g.doStep()
+		if flashes == all {
+			return step + 1
+		}
+	}
+}
+
+func (g *Grid) doStep() int {
 	candidates := make([]Point, 0)
 
 	// First part of step, all octopuses increase energy by one
 	i := 0
-	p := Point{row:0, col:0}
+	p := Point{row: 0, col: 0}
 	for ; p.row < g.rows; p.row++ {
 		for p.col = 0; p.col < g.cols; p.col++ {
 			g.energy[i]++
@@ -49,14 +59,14 @@ func (g* Grid) doStep() int {
 	}
 
 	flashing := 0
-	isFlashing := make([]bool, g.rows * g.cols)
+	isFlashing := make([]bool, g.rows*g.cols)
 	for {
 		remaining := len(candidates)
 		if remaining == 0 {
 			break
 		}
 		candidate := candidates[remaining-1]
-		candidates = candidates[0:remaining-1]
+		candidates = candidates[0 : remaining-1]
 		index, _ := g.index(&candidate)
 
 		if isFlashing[index] {
@@ -71,7 +81,7 @@ func (g* Grid) doStep() int {
 					continue
 				}
 
-				neighbour := Point{ row: candidate.row + drow, col: candidate.col + dcol }
+				neighbour := Point{row: candidate.row + drow, col: candidate.col + dcol}
 				if index, onGrid := g.index(&neighbour); onGrid {
 					if !isFlashing[index] {
 						g.energy[index]++
@@ -86,7 +96,7 @@ func (g* Grid) doStep() int {
 	}
 
 	i = 0
-	p = Point{row:0, col:0}
+	p = Point{row: 0, col: 0}
 	for ; p.row < g.rows; p.row++ {
 		for p.col = 0; p.col < g.cols; p.col++ {
 			if g.energy[i] > 9 {
@@ -99,14 +109,14 @@ func (g* Grid) doStep() int {
 	return flashing
 }
 
-func (g* Grid) index(p* Point) (int, bool) {
+func (g *Grid) index(p *Point) (int, bool) {
 	if p.row < 0 || p.col < 0 || p.row >= g.rows || p.col >= g.cols {
 		return -1, false
 	}
-	return g.cols * p.row + p.col, true
+	return g.cols*p.row + p.col, true
 }
 
-func (g* Grid) print() {
+func (g *Grid) print() {
 	i := 0
 	for row := 0; row < g.rows; row++ {
 		for col := 0; col < g.cols; col++ {
