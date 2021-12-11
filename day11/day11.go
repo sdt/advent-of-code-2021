@@ -42,60 +42,16 @@ func part2(g Grid) int {
 }
 
 func (g *Grid) doStep() int {
-	candidates := make([]Point, 0)
+	flashing := 0
 
-	// First part of step, all octopuses increase energy by one
-	i := 0
 	p := Point{row: 0, col: 0}
 	for ; p.row < g.rows; p.row++ {
 		for p.col = 0; p.col < g.cols; p.col++ {
-			g.energy[i]++
-			if g.energy[i] > 9 {
-				candidates = append(candidates, p)
-				//fmt.Println("Adding candidate(1): ", p)
-			}
-			i++
+			flashing += g.increaseEnergy(&p)
 		}
 	}
 
-	flashing := 0
-	isFlashing := make([]bool, g.rows*g.cols)
-	for {
-		remaining := len(candidates)
-		if remaining == 0 {
-			break
-		}
-		candidate := candidates[remaining-1]
-		candidates = candidates[0 : remaining-1]
-		index, _ := g.index(&candidate)
-
-		if isFlashing[index] {
-			continue
-		}
-		isFlashing[index] = true
-		flashing++
-
-		for drow := -1; drow <= 1; drow++ {
-			for dcol := -1; dcol <= 1; dcol++ {
-				if drow == 0 && dcol == 0 {
-					continue
-				}
-
-				neighbour := Point{row: candidate.row + drow, col: candidate.col + dcol}
-				if index, onGrid := g.index(&neighbour); onGrid {
-					if !isFlashing[index] {
-						g.energy[index]++
-						if g.energy[index] > 9 {
-							candidates = append(candidates, neighbour)
-							//fmt.Println("Adding candidate(2): ", neighbour)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	i = 0
+	i := 0
 	p = Point{row: 0, col: 0}
 	for ; p.row < g.rows; p.row++ {
 		for p.col = 0; p.col < g.cols; p.col++ {
@@ -108,6 +64,32 @@ func (g *Grid) doStep() int {
 
 	return flashing
 }
+
+func (g *Grid) increaseEnergy(p* Point) int {
+	index, onGrid := g.index(p)
+	if !onGrid {
+		return 0
+	}
+
+	g.energy[index]++
+	if g.energy[index] != 10 {
+		return 0
+	}
+
+	total := 1
+	for drow := -1; drow <= 1; drow++ {
+		for dcol := -1; dcol <= 1; dcol++ {
+			if drow == 0 && dcol == 0 {
+				continue
+			}
+
+			neighbour := Point{row: p.row + drow, col: p.col + dcol}
+			total += g.increaseEnergy(&neighbour)
+		}
+	}
+	return total
+}
+
 
 func (g *Grid) index(p *Point) (int, bool) {
 	if p.row < 0 || p.col < 0 || p.row >= g.rows || p.col >= g.cols {
