@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"regexp"
 )
@@ -19,7 +19,7 @@ type Line struct {
 type Ocean map[Point]int
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 	lines := parse(filename)
 	fmt.Println(part1(lines))
 	fmt.Println(part2(lines))
@@ -96,7 +96,7 @@ func signMag(value int) (int, int) {
 }
 
 func parse(filename string) []Line {
-	input := common.GetInputLines(filename)
+	input := aoc.GetInputLines(filename)
 	lines := make([]Line, len(input))
 
 	for i, line := range input {
@@ -109,7 +109,7 @@ func parseLine(line string) Line {
 	matches := LineRegex.FindStringSubmatch(line)
 	numbers := make([]int, 4)
 	for i := 0; i < 4; i++ {
-		numbers[i] = common.ParseInt(matches[i+1])
+		numbers[i] = aoc.ParseInt(matches[i+1])
 	}
 	return Line{p: [2]Point{Point{x: numbers[0], y: numbers[1]}, Point{x: numbers[2], y: numbers[3]}}}
 }

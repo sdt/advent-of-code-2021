@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"regexp"
 	"strings"
@@ -24,8 +24,8 @@ type Bingo struct {
 }
 
 func main() {
-	filename := common.GetFilename()
-	bingo := parseBingo(common.GetInputLines(filename))
+	filename := aoc.GetFilename()
+	bingo := parseBingo(aoc.GetInputLines(filename))
 
 	fmt.Println(part1(bingo))
 	fmt.Println(part2(bingo))
@@ -78,7 +78,7 @@ func parseBoard(lines []string) *Board {
 	for row, line := range lines {
 		line = strings.TrimSpace(line)
 		for col, word := range WhiteSpace.Split(line, -1) {
-			board.cells[row][col] = common.ParseInt(word)
+			board.cells[row][col] = aoc.ParseInt(word)
 		}
 	}
 	return &board
@@ -139,5 +139,5 @@ func (board *Board) mark(number int) bool {
 }
 
 func parseDraw(line string) Draw {
-	return common.ParseInts(strings.Split(line, ","))
+	return aoc.ParseInts(strings.Split(line, ","))
 }

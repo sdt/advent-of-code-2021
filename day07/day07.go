@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"math"
 	"strings"
@@ -10,7 +10,7 @@ import (
 type FuelFunction func(int) int
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 	positions := getInput(filename)
 
 	fmt.Println(part1(positions))
@@ -65,7 +65,7 @@ func abs(x int) int {
 }
 
 func getInput(filename string) []int {
-	lines := common.GetInputLines(filename)
+	lines := aoc.GetInputLines(filename)
 	words := strings.Split(lines[0], ",")
-	return common.ParseInts(words)
+	return aoc.ParseInts(words)
 }

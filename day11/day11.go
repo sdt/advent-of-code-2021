@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 )
 
@@ -15,7 +15,7 @@ type Point struct {
 }
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 
 	fmt.Println(part1(parseGrid(filename), 100))
 	fmt.Println(part2(parseGrid(filename)))
@@ -133,7 +133,7 @@ func (g *Grid) print() {
 }
 
 func parseGrid(filename string) Grid {
-	lines := common.GetInputLines(filename)
+	lines := aoc.GetInputLines(filename)
 	rows := len(lines)
 	cols := len(lines[0])
 	grid := Grid{rows: rows, cols: cols, energy: make([]int, rows*cols)}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"log"
 	"strconv"
@@ -16,7 +16,7 @@ const (
 )
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 	reports, width := getReports(filename)
 
 	fmt.Println(part1(reports, width))
@@ -102,12 +102,12 @@ func getMostCommonBits(reports []int, bit int) MostCommonBits {
 }
 
 func getReports(filename string) ([]int, int) {
-	lines := common.GetInputLines(filename)
+	lines := aoc.GetInputLines(filename)
 	reports := make([]int, 0)
 
 	for _, line := range lines {
 		report, err := strconv.ParseInt(line, 2, 32)
-		common.CheckErr(err)
+		aoc.CheckErr(err)
 		reports = append(reports, int(report))
 	}
 

@@ -1,21 +1,21 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"strings"
 )
 
 func main() {
-	filename := common.GetFilename()
-	lines := common.GetInputLines(filename)
+	filename := aoc.GetFilename()
+	lines := aoc.GetInputLines(filename)
 
 	p1 := newPart1()
 	p2 := newPart2()
 
 	for _, line := range lines {
 		words := strings.Split(line, " ")
-		count := common.ParseInt(words[1])
+		count := aoc.ParseInt(words[1])
 
 		p1.update(words[0], count)
 		p2.update(words[0], count)

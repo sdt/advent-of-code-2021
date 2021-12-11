@@ -1,4 +1,4 @@
-package common
+package aoc
 
 import (
 	"bufio"

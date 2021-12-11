@@ -1,12 +1,12 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 )
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 	depths := getDepths(filename)
 	fmt.Println(getIncreases(depths, 1))
 	fmt.Println(getIncreases(depths, 3))
@@ -24,6 +24,6 @@ func getIncreases(depths []int, windowSize int) int {
 }
 
 func getDepths(filename string) []int {
-	lines := common.GetInputLines(filename)
-	return common.ParseInts(lines)
+	lines := aoc.GetInputLines(filename)
+	return aoc.ParseInts(lines)
 }

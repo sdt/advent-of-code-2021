@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"log"
 	"sort"
@@ -24,8 +24,8 @@ var DigitSegments = [...]string{
 }
 
 func main() {
-	filename := common.GetFilename()
-	lines := common.GetInputLines(filename)
+	filename := aoc.GetFilename()
+	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
 	fmt.Println(part2(lines))

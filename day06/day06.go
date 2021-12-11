@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"strings"
 )
@@ -9,7 +9,7 @@ import (
 var memo [500]int
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 	fmt.Println(part1(filename))
 	fmt.Println(part2(filename))
 }
@@ -50,7 +50,7 @@ func totalFish(days int) int {
 }
 
 func getInput(filename string) []int {
-	lines := common.GetInputLines(filename)
+	lines := aoc.GetInputLines(filename)
 	words := strings.Split(lines[0], ",")
-	return common.ParseInts(words)
+	return aoc.ParseInts(words)
 }

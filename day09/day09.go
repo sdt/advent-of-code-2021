@@ -1,7 +1,7 @@
 package main
 
 import (
-	"advent-of-code/common"
+	"advent-of-code/aoc"
 	"fmt"
 	"sort"
 )
@@ -12,7 +12,7 @@ type HeightMap struct {
 }
 
 func main() {
-	filename := common.GetFilename()
+	filename := aoc.GetFilename()
 	heightMap := parseHeightMap(filename)
 
 	fmt.Println(part1(&heightMap))
@@ -44,7 +44,7 @@ func part2(h *HeightMap) int {
 }
 
 func parseHeightMap(filename string) HeightMap {
-	lines := common.GetInputLines(filename)
+	lines := aoc.GetInputLines(filename)
 	rows := len(lines)
 	cols := len(lines[0])
 	heightMap := HeightMap{rows: rows, cols: cols, height: make([]int, rows*cols)}
