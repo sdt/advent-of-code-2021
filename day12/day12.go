@@ -53,6 +53,7 @@ func main() {
 	caves := parseCaves(aoc.GetFilename())
 
 	fmt.Println(part1(&caves))
+	fmt.Println(part2(&caves))
 }
 
 func part1(caves *Caves) int {
@@ -68,6 +69,28 @@ func walk1(path Path, caves* Caves) int {
 		} else if caves.IsLarge(to) || !path.Seen(to) {
 			next := path.Extend(to)
 			paths += walk1(next, caves)
+		}
+	}
+	return paths
+}
+
+func part2(caves *Caves) int {
+	return walk2(MakePath(), caves)
+}
+
+func walk2(path Path, caves* Caves) int {
+	paths := 0
+
+	for _, to := range caves.To(path.from) {
+		if to == End {
+			paths++
+		} else if caves.IsLarge(to) || !path.Seen(to) {
+			next := path.Extend(to)
+			paths += walk2(next, caves)
+		} else if !path.Seen(Double) {
+			next := path.Extend(to)
+			next.SeenDouble()
+			paths += walk2(next, caves)
 		}
 	}
 	return paths
@@ -131,6 +154,10 @@ func (this *CaveMap) Lookup(cave string) Cave {
 
 func (this *Path) Extend(cave Cave) Path {
 	return Path{seen: this.seen | 1 << cave, from: cave}
+}
+
+func (this *Path) SeenDouble() {
+	this.seen |= 1 << Double
 }
 
 func (this *Path) Seen(cave Cave) bool {
