@@ -30,8 +30,8 @@ func GetInputLines(filename string) []string {
 
 func ParseInts(in []string) []int {
 	out := make([]int, len(in))
-	for _, line := range in {
-		out = append(out, ParseInt(line))
+	for i, line := range in {
+		out[i] = ParseInt(line)
 	}
 	return out
 }
