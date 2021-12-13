@@ -19,6 +19,7 @@ func main() {
 	points, folds := getInput(aoc.GetFilename())
 
 	fmt.Println(part1(points, folds))
+	part2(points, folds)
 }
 
 func part1(points []Point, folds []Fold) int {
@@ -29,6 +30,36 @@ func part1(points []Point, folds []Fold) int {
 		unique[out] = true
 	}
 	return len(unique)
+}
+
+func part2(points []Point, folds []Fold) {
+	dot := make(map[Point]bool)
+	max := makePoint(0, 0)
+
+	for _, p := range(points) {
+		for _, f := range folds {
+			p = f.Apply(p)
+		}
+
+		dot[p] = true
+		for i := 0; i < 2; i++ {
+			if p.p[i] > max.p[i] {
+				max.p[i] = p.p[i]
+			}
+		}
+	}
+
+	for y := 0; y <= max.p[1]; y++ {
+		for x := 0; x <= max.p[0]; x++ {
+			p := makePoint(x, y)
+			if dot[p] {
+				fmt.Print("#")
+			} else {
+				fmt.Print(" ")
+			}
+		}
+		fmt.Print("\n")
+	}
 }
 
 func makePoint(x, y int) Point {
