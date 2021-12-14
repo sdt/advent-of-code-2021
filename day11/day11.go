@@ -65,7 +65,7 @@ func (g *Grid) doStep() int {
 	return flashing
 }
 
-func (g *Grid) increaseEnergy(p* Point) int {
+func (g *Grid) increaseEnergy(p *Point) int {
 	index, onGrid := g.index(p)
 	if !onGrid {
 		return 0
@@ -89,7 +89,6 @@ func (g *Grid) increaseEnergy(p* Point) int {
 	}
 	return total
 }
-
 
 func (g *Grid) index(p *Point) (int, bool) {
 	if p.row < 0 || p.col < 0 || p.row >= g.rows || p.col >= g.cols {

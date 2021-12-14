@@ -25,7 +25,7 @@ func main() {
 func part1(points []Point, folds []Fold) int {
 	unique := make(map[Point]bool)
 
-	for _, in := range(points) {
+	for _, in := range points {
 		out := folds[0].Apply(in)
 		unique[out] = true
 	}
@@ -36,7 +36,7 @@ func part2(points []Point, folds []Fold) {
 	dot := make(map[Point]bool)
 	max := makePoint(0, 0)
 
-	for _, p := range(points) {
+	for _, p := range points {
 		for _, f := range folds {
 			p = f.Apply(p)
 		}
@@ -63,7 +63,7 @@ func part2(points []Point, folds []Fold) {
 }
 
 func makePoint(x, y int) Point {
-	return Point{p:[2]int{x, y}}
+	return Point{p: [2]int{x, y}}
 }
 
 func parsePoint(line string) Point {
@@ -89,7 +89,7 @@ func parseFold(line string) Fold {
 
 func (this *Fold) Apply(p Point) Point {
 	if p.p[this.dir] > this.pos {
-		p.p[this.dir] = 2 * this.pos - p.p[this.dir]
+		p.p[this.dir] = 2*this.pos - p.p[this.dir]
 	}
 	return p
 }

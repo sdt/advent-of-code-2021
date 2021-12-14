@@ -11,9 +11,10 @@ type Rules map[string]byte
 type Hist map[byte]int
 type Signature struct {
 	lhs, rhs byte
-	depth int
+	depth    int
 }
 type Memo map[Signature]Hist
+
 var memo Memo = make(Memo)
 
 func main() {
@@ -55,14 +56,14 @@ func findScore(start string, rules Rules, depth int) int {
 }
 
 func recurse(lhs, rhs byte, rules Rules, depth int) Hist {
-	signature := Signature{lhs:lhs, rhs:rhs, depth:depth}
+	signature := Signature{lhs: lhs, rhs: rhs, depth: depth}
 	if answer, found := memo[signature]; found {
 		return answer
 	}
 
 	hist := make(Hist)
 	mid := rules[string([]byte{lhs, rhs})]
-	hist[mid] = 1;
+	hist[mid] = 1
 
 	if depth--; depth > 0 {
 		addHist(hist, recurse(lhs, mid, rules, depth))

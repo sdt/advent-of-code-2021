@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	Start = 0
-	End = 1
-	Double = 2
+	Start     = 0
+	End       = 1
+	Double    = 2
 	FirstCave = 3
 )
 
 type Cave int32
 
 type Caves struct {
-	to [][]Cave
+	to      [][]Cave
 	isLarge Cave
 }
 
@@ -30,7 +30,7 @@ func MakeCaves(count int, isLarge Cave) Caves {
 
 type CaveMap struct {
 	mapping map[string]Cave
-	next Cave
+	next    Cave
 }
 
 func MakeCaveMap() CaveMap {
@@ -46,7 +46,7 @@ type Path struct {
 }
 
 func MakePath() Path {
-	return Path{seen:0, from:Start}
+	return Path{seen: 0, from: Start}
 }
 
 func main() {
@@ -60,7 +60,7 @@ func part1(caves *Caves) int {
 	return walk1(MakePath(), caves)
 }
 
-func walk1(path Path, caves* Caves) int {
+func walk1(path Path, caves *Caves) int {
 	paths := 0
 
 	for _, to := range caves.To(path.from) {
@@ -78,7 +78,7 @@ func part2(caves *Caves) int {
 	return walk2(MakePath(), caves)
 }
 
-func walk2(path Path, caves* Caves) int {
+func walk2(path Path, caves *Caves) int {
 	paths := 0
 
 	for _, to := range caves.To(path.from) {
@@ -153,7 +153,7 @@ func (this *CaveMap) Lookup(cave string) Cave {
 }
 
 func (this *Path) Extend(cave Cave) Path {
-	return Path{seen: this.seen | 1 << cave, from: cave}
+	return Path{seen: this.seen | 1<<cave, from: cave}
 }
 
 func (this *Path) SeenDouble() {
