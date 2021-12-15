@@ -21,7 +21,7 @@ type Path struct {
 }
 
 type PathQueue struct {
-	heap []Path
+	heap []*Path
 }
 
 func main() {
@@ -33,27 +33,31 @@ func main() {
 
 func part1(cavern *Cavern) int {
 	queue := makePathQueue()
-	queue.AddPath(makePath())
+	path := makePath()
+	queue.AddPath(&path)
 
 	for {
 		path := queue.BestPath()
+		//fmt.Printf("Pos=%v, Length = %d, risklevel = %d\n", path.pos, len(path.seen), path.riskLevel)
 
 		if cavern.AtGoal(&path.pos) {
 			return path.riskLevel
 		}
 
 		if next, ok := path.Extend(0, 1, cavern); ok {
-			queue.AddPath(*next)
+			queue.AddPath(next)
 		}
 		if next, ok := path.Extend(1, 0, cavern); ok {
-			queue.AddPath(*next)
+			queue.AddPath(next)
 		}
+		/*
 		if next, ok := path.Extend(0, -1, cavern); ok {
-			queue.AddPath(*next)
+			queue.AddPath(next)
 		}
 		if next, ok := path.Extend(-1, 0, cavern); ok {
-			queue.AddPath(*next)
+			queue.AddPath(next)
 		}
+		*/
 	}
 
 	return 0
@@ -76,16 +80,16 @@ func parseCavern(lines []string) Cavern {
 }
 
 func makePath() Path {
-	seen := make(map[Position]bool)
+	//seen := make(map[Position]bool)
 	riskLevel := 0
 	pos := Position{row:0, col:0}
-	seen[pos] = true
+	//seen[pos] = true
 
-	return Path{seen:seen, riskLevel:riskLevel, pos:pos}
+	return Path{/*seen:seen,*/ riskLevel:riskLevel, pos:pos}
 }
 
 func makePathQueue() PathQueue {
-	return PathQueue{heap:make([]Path, 0)}
+	return PathQueue{heap:make([]*Path, 0)}
 }
 
 func (c *Cavern) InCavern(p *Position) bool {
@@ -100,7 +104,7 @@ func (c *Cavern) GetRiskLevel(p *Position) int {
 	return c.cell[p.row * c.cols + p.col]
 }
 
-func (q *PathQueue) AddPath(p Path) {
+func (q *PathQueue) AddPath(p *Path) {
 	q.heap = append(q.heap, p)
 
 	// up heap
@@ -117,7 +121,7 @@ func (q *PathQueue) AddPath(p Path) {
 	}
 }
 
-func (q *PathQueue) BestPath() Path {
+func (q *PathQueue) BestPath() *Path {
 	best := q.heap[0]
 
 	size := len(q.heap) - 1
@@ -157,21 +161,19 @@ func (q *PathQueue) BestPath() Path {
 
 func (p *Path) Extend(x, y int, cavern *Cavern) (*Path, bool) {
 	pos := Position{p.pos.row + y, p.pos.col + x}
-	if !cavern.InCavern(&pos) || p.seen[pos] {
+	if !cavern.InCavern(&pos) { // || p.seen[pos] {
 		return nil, false
 	}
 
-	if p.seen[pos] {
-		return nil, false
-	}
-
+	/*
 	seen := make(map[Position]bool, len(p.seen) + 1)
 	for k,v := range p.seen {
 		seen[k] = v
 	}
 	seen[pos] = true
+	*/
 
-	ret := Path{ seen:seen, riskLevel:p.riskLevel + cavern.GetRiskLevel(&pos), pos:pos }
+	ret := Path{ /*seen:seen,*/ riskLevel:p.riskLevel + cavern.GetRiskLevel(&pos), pos:pos }
 
 	return &ret, true
 }
