@@ -3,25 +3,16 @@ package main
 import (
 	"advent-of-code/aoc"
 	"fmt"
+	"math"
 )
 
 type Cavern struct {
 	rows, cols int
-	cell []int
+	riskLevel []int
 }
 
 type Position struct {
 	row, col int
-}
-
-type Path struct {
-	seen map[Position]bool
-	riskLevel int
-	pos Position
-}
-
-type PathQueue struct {
-	heap []*Path
 }
 
 func main() {
@@ -32,148 +23,83 @@ func main() {
 }
 
 func part1(cavern *Cavern) int {
-	queue := makePathQueue()
-	path := makePath()
-	queue.AddPath(&path)
+	lowest := make([]int, cavern.rows * cavern.cols)
 
-	for {
-		path := queue.BestPath()
-		//fmt.Printf("Pos=%v, Length = %d, risklevel = %d\n", path.pos, len(path.seen), path.riskLevel)
+	//printGrid(cavern.rows, cavern.cols, cavern.riskLevel)
 
-		if cavern.AtGoal(&path.pos) {
-			return path.riskLevel
-		}
+	// initialise the lowest grid with maxint, with a one square border all
+	// around containing zeros
+	max := math.MaxInt
 
-		if next, ok := path.Extend(0, 1, cavern); ok {
-			queue.AddPath(next)
+	rows := cavern.rows - 1
+	cols := cavern.cols - 1
+	start := cavern.cols + 1
+	i := start
+	for row := 1; row < rows; row++ {
+		for col := 1; col < cols; col++ {
+			lowest[i] = max
+			i++
 		}
-		if next, ok := path.Extend(1, 0, cavern); ok {
-			queue.AddPath(next)
-		}
-		/*
-		if next, ok := path.Extend(0, -1, cavern); ok {
-			queue.AddPath(next)
-		}
-		if next, ok := path.Extend(-1, 0, cavern); ok {
-			queue.AddPath(next)
-		}
-		*/
+		i += 2
 	}
 
-	return 0
+	walkLowestRiskLevel(start, 0, lowest, cavern)
+	end := (cavern.rows - 1) * cavern.cols - 2
+
+	//printGrid(cavern.rows, cavern.cols, lowest)
+
+	return lowest[end] - cavern.riskLevel[start]
+}
+
+func walkLowestRiskLevel(pos, riskLevel int, lowest []int, cavern *Cavern) {
+	lowestRiskLevel := lowest[pos]
+	if lowestRiskLevel == 0 {
+		return // off the map
+	}
+
+	riskLevel += cavern.riskLevel[pos]
+	if riskLevel >= lowestRiskLevel {
+		return // this is no better than previous
+	}
+
+	// We've found a better path to this square
+	lowest[pos] = riskLevel
+
+	h := 1
+	v := cavern.cols
+
+	walkLowestRiskLevel(pos + h, riskLevel, lowest, cavern) // right
+	walkLowestRiskLevel(pos + v, riskLevel, lowest, cavern) // down
+	walkLowestRiskLevel(pos - h, riskLevel, lowest, cavern) // left
+	walkLowestRiskLevel(pos - v, riskLevel, lowest, cavern) // up
 }
 
 func parseCavern(lines []string) Cavern {
-	rows := len(lines)
-	cols := len(lines[0])
-	cell := make([]int, rows * cols)
+	// Leave a one square border around each side
+	rows := len(lines) + 2
+	cols := len(lines[0]) + 2
+	riskLevel := make([]int, rows * cols)
 
-	i := 0
+	i := cols + 1 // {1,1}
 	for _, line := range lines {
 		for _, digit := range line {
-			cell[i] = int(digit - '0')
+			riskLevel[i] = int(digit - '0')
 			i++
 		}
+		i += 2
 	}
 
-	return Cavern{rows:rows, cols:cols, cell:cell}
+	return Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
 }
 
-func makePath() Path {
-	//seen := make(map[Position]bool)
-	riskLevel := 0
-	pos := Position{row:0, col:0}
-	//seen[pos] = true
-
-	return Path{/*seen:seen,*/ riskLevel:riskLevel, pos:pos}
-}
-
-func makePathQueue() PathQueue {
-	return PathQueue{heap:make([]*Path, 0)}
-}
-
-func (c *Cavern) InCavern(p *Position) bool {
-	return p.row >= 0 && p.col >= 0 && p.row < c.rows && p.col < c.cols
-}
-
-func (c *Cavern) AtGoal(p* Position) bool {
-	return (p.row + 1 == c.rows) && (p.col + 1 == c.cols)
-}
-
-func (c *Cavern) GetRiskLevel(p *Position) int {
-	return c.cell[p.row * c.cols + p.col]
-}
-
-func (q *PathQueue) AddPath(p *Path) {
-	q.heap = append(q.heap, p)
-
-	// up heap
-	child := len(q.heap) - 1
-	for child > 0 {
-		parent := (child - 1) / 2
-
-		if q.heap[parent].riskLevel < q.heap[child].riskLevel {
-			return
+func printGrid(rows, cols int, cell []int) {
+	i := 0
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			fmt.Printf("%3d ", cell[i])
+			i++
 		}
-
-		q.heap[parent], q.heap[child] = q.heap[child], q.heap[parent]
-		child = parent
+		fmt.Printf("\n")
 	}
-}
-
-func (q *PathQueue) BestPath() *Path {
-	best := q.heap[0]
-
-	size := len(q.heap) - 1
-
-	if size > 0 {
-		q.heap[0] = q.heap[size]
-
-		// down heap
-		parent := 0
-		for {
-			lchild := parent * 2 + 1
-			if lchild >= size {
-				break
-			}
-			rchild := parent * 2 + 2
-			var child int
-			if rchild >= size {
-				child = lchild
-			} else if q.heap[lchild].riskLevel <= q.heap[rchild].riskLevel {
-				child = lchild
-			} else {
-				child = rchild
-			}
-
-			if q.heap[parent].riskLevel < q.heap[child].riskLevel {
-				break
-			}
-
-			q.heap[parent], q.heap[child] = q.heap[child], q.heap[parent]
-			parent = child
-		}
-	}
-
-	q.heap = q.heap[0:size]
-	return best
-}
-
-func (p *Path) Extend(x, y int, cavern *Cavern) (*Path, bool) {
-	pos := Position{p.pos.row + y, p.pos.col + x}
-	if !cavern.InCavern(&pos) { // || p.seen[pos] {
-		return nil, false
-	}
-
-	/*
-	seen := make(map[Position]bool, len(p.seen) + 1)
-	for k,v := range p.seen {
-		seen[k] = v
-	}
-	seen[pos] = true
-	*/
-
-	ret := Path{ /*seen:seen,*/ riskLevel:p.riskLevel + cavern.GetRiskLevel(&pos), pos:pos }
-
-	return &ret, true
+	fmt.Printf("\n")
 }
