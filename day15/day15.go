@@ -8,7 +8,7 @@ import (
 
 type Cavern struct {
 	rows, cols int
-	riskLevel []int
+	riskLevel []int	// this is (rows+2) * (cols+2) - sentinel border all around
 }
 
 type Position struct {
@@ -23,30 +23,21 @@ func main() {
 }
 
 func part1(cavern *Cavern) int {
-	lowest := make([]int, cavern.rows * cavern.cols)
-
-	//printGrid(cavern.rows, cavern.cols, cavern.riskLevel)
-
 	// initialise the lowest grid with maxint, with a one square border all
 	// around containing zeros
-	max := math.MaxInt
+	lowest := cavern.makeGrid(math.MaxInt)
 
-	rows := cavern.rows - 1
-	cols := cavern.cols - 1
-	start := cavern.cols + 1
-	i := start
-	for row := 1; row < rows; row++ {
-		for col := 1; col < cols; col++ {
-			lowest[i] = max
-			i++
-		}
-		i += 2
-	}
+	//printGrid(cavern.rows + 2, cavern.cols + 2, cavern.riskLevel)
+	//printGrid(cavern.rows + 2, cavern.cols + 2, lowest)
 
+	w := cavern.cols + 2
+	h := cavern.rows + 2
+
+	start := w + 1
+	end := w * (h-1) - 2
 	walkLowestRiskLevel(start, 0, lowest, cavern)
-	end := (cavern.rows - 1) * cavern.cols - 2
 
-	//printGrid(cavern.rows, cavern.cols, lowest)
+	//printGrid(cavern.rows + 2, cavern.cols + 2, lowest)
 
 	return lowest[end] - cavern.riskLevel[start]
 }
@@ -66,7 +57,7 @@ func walkLowestRiskLevel(pos, riskLevel int, lowest []int, cavern *Cavern) {
 	lowest[pos] = riskLevel
 
 	h := 1
-	v := cavern.cols
+	v := cavern.cols + 2
 
 	walkLowestRiskLevel(pos + h, riskLevel, lowest, cavern) // right
 	walkLowestRiskLevel(pos + v, riskLevel, lowest, cavern) // down
@@ -74,19 +65,37 @@ func walkLowestRiskLevel(pos, riskLevel int, lowest []int, cavern *Cavern) {
 	walkLowestRiskLevel(pos - v, riskLevel, lowest, cavern) // up
 }
 
+func (c *Cavern) makeGrid(value int) []int {
+	grid := make([]int, len(c.riskLevel))
+
+	for row := 0; row < c.rows; row++ {
+		for col := 0; col < c.cols; col++ {
+			index := c.index(row, col)
+			grid[index] = value
+		}
+	}
+
+	return grid
+}
+
+func (c *Cavern) index(row, col int) int {
+	// Take the borders into account here
+	return (row + 1) * (c.cols + 2) + col + 1
+}
+
 func parseCavern(lines []string) Cavern {
 	// Leave a one square border around each side
-	rows := len(lines) + 2
-	cols := len(lines[0]) + 2
-	riskLevel := make([]int, rows * cols)
+	rows := len(lines)
+	cols := len(lines[0])
+	riskLevel := make([]int, (rows + 2) * (cols + 2))
 
-	i := cols + 1 // {1,1}
-	for _, line := range lines {
-		for _, digit := range line {
-			riskLevel[i] = int(digit - '0')
-			i++
+	cavern := Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
+
+	for row, line := range lines {
+		for col, digit := range line {
+			index := cavern.index(row, col)
+			riskLevel[index] = int(digit - '0')
 		}
-		i += 2
 	}
 
 	return Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
