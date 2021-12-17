@@ -35,51 +35,37 @@ func part1(bitstream *Bitstream) int {
 	return int(part1)
 }
 
+type Opcode int64
+
+const (
+	Sum Opcode = iota
+	Product
+	Minimum
+	Maximum
+	Literal
+	GreaterThan
+	LessThan
+	EqualTo
+)
+
 func part2(bitstream *Bitstream) int {
 	bitstream.Reset()
 
-	stack := make([]Operator, 0)
-	stack = append(stack, MakeIdentity())
+	stack := MakeOperatorStack(Literal)
 
 	parseBitstream(bitstream, &ParseConfig{
 		onLiteral: func(_, value uint64) {
-			stack[len(stack)-1].addParam(value)
+			stack.Top().AddValue(value)
 		},
 		onBeginOperator: func(_, typeId uint64) {
-			var operator Operator
-			switch typeId {
-			case 0:
-				operator = MakeSum()
-			case 1:
-				operator = MakeProduct()
-			case 2:
-				operator = MakeMinimum()
-			case 3:
-				operator = MakeMaximum()
-			case 4:
-				operator = MakeIdentity()
-			case 5:
-				operator = MakeGreaterThan()
-			case 6:
-				operator = MakeLessThan()
-			case 7:
-				operator = MakeEqualTo()
-			}
-			stack = append(stack, operator)
+			stack.Push(Opcode(typeId))
 		},
 		onEndOperator: func() {
-			value := stack[len(stack)-1].evaluate()
-			stack = stack[0 : len(stack)-1]
-			stack[len(stack)-1].addParam(value)
+			value := stack.Top().Evaluate()
+			stack.Pop()
+			stack.Top().AddValue(value)
 		}})
-	return int(stack[len(stack)-1].evaluate())
-}
-
-func indent(depth int) {
-	fmt.Printf("\n")
-	for i := 0; i < depth; i++ {
-		fmt.Printf("  ")
-	}
+	return int(stack.Top().Evaluate())
 }
 
 func getInput(filename string) Bitstream {
@@ -88,8 +74,6 @@ func getInput(filename string) Bitstream {
 }
 
 //------------------------------------------------------------------------------
-
-const Literal = 4
 
 type OnLiteral func(version, value uint64)
 type OnBeginOperator func(version, typeId uint64)
@@ -111,7 +95,7 @@ func parsePacket(bitstream *Bitstream, config *ParseConfig) {
 	version := bitstream.ReadBits(3)
 	typeId := bitstream.ReadBits(3)
 
-	if typeId == Literal {
+	if typeId == uint64(Literal) {
 		config.onLiteral(version, parseLiteral(bitstream))
 	} else {
 		lengthTypeId := bitstream.ReadBits(1)
@@ -139,7 +123,6 @@ func parseLiteral(bitstream *Bitstream) uint64 {
 
 func parseOperator0(bitstream *Bitstream, config *ParseConfig) {
 	bits := bitstream.ReadBits(15)
-	//fmt.Printf("Type 0 - %d bits\n", bits)
 	endPosition := bitstream.BitPosition() + bits
 
 	for {
@@ -148,18 +131,14 @@ func parseOperator0(bitstream *Bitstream, config *ParseConfig) {
 			return
 		}
 	}
-	//fmt.Printf("End type 0 - %d bits\n", bits)
 }
 
 func parseOperator1(bitstream *Bitstream, config *ParseConfig) {
 	packets := int(bitstream.ReadBits(11))
-	//fmt.Printf("Type 1 - %d packets\n", packets)
 
 	for i := 0; i < packets; i++ {
 		parsePacket(bitstream, config)
 	}
-
-	//fmt.Printf("End type 1 - %d packets\n", packets)
 }
 
 //------------------------------------------------------------------------------
@@ -235,162 +214,87 @@ func parseNybble(hexchar rune) uint8 {
 
 //------------------------------------------------------------------------------
 
-type Operator interface {
-	addParam(param uint64)
-	evaluate() uint64
+type Operator struct {
+	opcode Opcode
+	values []uint64
 }
 
-//------------------------------------------------------------------------------
-
-type Identity struct {
-	value uint64
+func MakeOperator(opcode Opcode) Operator {
+	return Operator{opcode: opcode, values: make([]uint64, 0)}
 }
 
-func MakeIdentity() *Identity {
-	return &Identity{value: 0}
+func (this *Operator) AddValue(value uint64) {
+	this.values = append(this.values, value)
 }
 
-func (this *Identity) addParam(param uint64) {
-	this.value = param
-}
+func (this *Operator) Evaluate() uint64 {
+	value := this.values[0]
 
-func (this *Identity) evaluate() uint64 {
-	return this.value
-}
-
-//------------------------------------------------------------------------------
-
-type Sum struct {
-	value uint64
-}
-
-func MakeSum() *Sum {
-	return &Sum{value: 0}
-}
-
-func (this *Sum) addParam(param uint64) {
-	this.value += param
-}
-
-func (this *Sum) evaluate() uint64 {
-	return this.value
-}
-
-//------------------------------------------------------------------------------
-
-type Product struct {
-	value uint64
-}
-
-func MakeProduct() *Product {
-	return &Product{value: 1}
-}
-
-func (this *Product) addParam(param uint64) {
-	this.value *= param
-}
-
-func (this *Product) evaluate() uint64 {
-	return this.value
-}
-
-//------------------------------------------------------------------------------
-
-type Minimum struct {
-	value uint64
-}
-
-func MakeMinimum() *Minimum {
-	return &Minimum{value: 0xffffffffffffffff}
-}
-
-func (this *Minimum) addParam(param uint64) {
-	if param < this.value {
-		this.value = param
+	switch this.opcode {
+	case Sum:
+		for _, x := range this.values[1:] {
+			value += x
+		}
+	case Product:
+		for _, x := range this.values[1:] {
+			value *= x
+		}
+	case Minimum:
+		for _, x := range this.values[1:] {
+			if x < value {
+				value = x
+			}
+		}
+	case Maximum:
+		for _, x := range this.values[1:] {
+			if x > value {
+				value = x
+			}
+		}
+	case Literal:
+		value = this.values[len(this.values)-1]
+	case GreaterThan:
+		if value > this.values[1] {
+			value = 1
+		} else {
+			value = 0
+		}
+	case LessThan:
+		if value < this.values[1] {
+			value = 1
+		} else {
+			value = 0
+		}
+	case EqualTo:
+		if value == this.values[1] {
+			value = 1
+		} else {
+			value = 0
+		}
 	}
-}
 
-func (this *Minimum) evaluate() uint64 {
-	return this.value
-}
-
-//------------------------------------------------------------------------------
-
-type Maximum struct {
-	value uint64
-}
-
-func MakeMaximum() *Maximum {
-	return &Maximum{value: 0}
-}
-
-func (this *Maximum) addParam(param uint64) {
-	if param > this.value {
-		this.value = param
-	}
-}
-
-func (this *Maximum) evaluate() uint64 {
-	return this.value
+	return value
 }
 
 //------------------------------------------------------------------------------
 
-type LessThan struct {
-	value []uint64
+type OperatorStack struct {
+	stack []Operator
 }
 
-func MakeLessThan() *LessThan {
-	return &LessThan{value: make([]uint64, 0)}
+func MakeOperatorStack(defaultOpcode Opcode) OperatorStack {
+	stack := []Operator{MakeOperator(defaultOpcode)}
+	return OperatorStack{stack: stack}
 }
 
-func (this *LessThan) addParam(param uint64) {
-	this.value = append(this.value, param)
+func (this *OperatorStack) Push(opcode Opcode) {
+	this.stack = append(this.stack, MakeOperator(opcode))
 }
 
-func (this *LessThan) evaluate() uint64 {
-	return fromBool(this.value[0] < this.value[1])
+func (this *OperatorStack) Top() *Operator {
+	return &this.stack[len(this.stack)-1]
 }
 
-//------------------------------------------------------------------------------
-
-type GreaterThan struct {
-	value []uint64
-}
-
-func MakeGreaterThan() *GreaterThan {
-	return &GreaterThan{value: make([]uint64, 0)}
-}
-
-func (this *GreaterThan) addParam(param uint64) {
-	this.value = append(this.value, param)
-}
-
-func (this *GreaterThan) evaluate() uint64 {
-	return fromBool(this.value[0] > this.value[1])
-}
-
-//------------------------------------------------------------------------------
-
-type EqualTo struct {
-	value []uint64
-}
-
-func MakeEqualTo() *EqualTo {
-	return &EqualTo{value: make([]uint64, 0)}
-}
-
-func (this *EqualTo) addParam(param uint64) {
-	this.value = append(this.value, param)
-}
-
-func (this *EqualTo) evaluate() uint64 {
-	return fromBool(this.value[0] == this.value[1])
-}
-
-func fromBool(x bool) uint64 {
-	if x {
-		return 1
-	}
-	return 0
+func (this *OperatorStack) Pop() {
+	this.stack = this.stack[0 : len(this.stack)-1]
 }
