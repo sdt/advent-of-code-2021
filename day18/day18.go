@@ -11,6 +11,7 @@ func main() {
 	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 //------------------------------------------------------------------------------
@@ -28,6 +29,33 @@ func part1(lines []string) int {
 	}
 
 	return accum.Magnitude()
+}
+
+func part2(lines[] string) int {
+	max := 0
+
+	for i, lhs := range lines {
+		for j, rhs := range lines {
+			if i == j {
+				continue
+			}
+
+			a := MakeTree(lhs)
+			a.Reduce()
+
+			b := MakeTree(rhs)
+			b.Reduce()
+
+			sum := a.Add(b)
+			sum.Reduce()
+
+			value := sum.Magnitude()
+			if value > max {
+				max = value
+			}
+		}
+	}
+	return max
 }
 
 //------------------------------------------------------------------------------
@@ -79,11 +107,11 @@ func MakeTree(s string) *Tree {
 }
 
 func (t *Tree) Reduce() {
-	fmt.Printf("Reduce: %s\n", t.ToString())
+	//fmt.Printf("Reduce: %s\n", t.ToString())
 	for i := 1; t.reduceStep(); i++ {
 		//fmt.Printf("\nReduce %d: %s\n", i, t.ToString())
 	}
-	fmt.Printf("--> Reduced to: %s\n\n", t.ToString())
+	//fmt.Printf("--> Reduced to: %s\n\n", t.ToString())
 }
 
 func (t *Tree) reduceStep() bool {
@@ -150,7 +178,7 @@ func (t *Tree) shouldSplit() bool {
 }
 
 func (t *Tree) split() {
-	fmt.Printf("Splitting: %s\n", t.ToString())
+	//fmt.Printf("Splitting: %s\n", t.ToString())
 	t.nodeType = Node
 	t.left  = &Tree{nodeType:Leaf, value:t.value / 2, parent: t}
 	t.right = &Tree{nodeType:Leaf, value:(t.value+1) / 2, parent: t}
@@ -158,7 +186,7 @@ func (t *Tree) split() {
 }
 
 func (t *Tree) explode() {
-	fmt.Printf("Exploding: %s\n", t.ToString())
+	//fmt.Printf("Exploding: %s\n", t.ToString())
 	if ! (t.left.IsLeaf() && t.right.IsLeaf()) {
 		panic("Trying to explode: " + t.ToString())
 	}
@@ -172,14 +200,14 @@ func (t *Tree) explode() {
 }
 
 func (t *Tree) explodeLeft(value int) {
-	fmt.Printf("ExplodeLeft(%d): %s\n", value, t.ToString())
+	//fmt.Printf("ExplodeLeft(%d): %s\n", value, t.ToString())
 	for {
 		if t.IsRoot() {
-			fmt.Println("-- giving up")
+			//fmt.Println("-- giving up")
 			return
 		}
 		if t.isRightChild() {
-			fmt.Printf("-- found junction: %s\n", t.parent.ToString())
+			//fmt.Printf("-- found junction: %s\n", t.parent.ToString())
 			t = t.parent.left
 			break;
 		}
@@ -188,10 +216,10 @@ func (t *Tree) explodeLeft(value int) {
 
 	for {
 		if t.IsNode() {
-			fmt.Printf("-- descending right leg: %s\n", t.right.ToString())
+			//fmt.Printf("-- descending right leg: %s\n", t.right.ToString())
 			t = t.right
 		} else {
-			fmt.Printf("-- found rightmost: %d + %d => %d\n", t.value, value, t.value + value)
+			//fmt.Printf("-- found rightmost: %d + %d => %d\n", t.value, value, t.value + value)
 			t.value += value
 			return
 		}
@@ -199,14 +227,14 @@ func (t *Tree) explodeLeft(value int) {
 }
 
 func (t *Tree) explodeRight(value int) {
-	fmt.Printf("ExplodeRight(%d): %s\n", value, t.ToString())
+	//fmt.Printf("ExplodeRight(%d): %s\n", value, t.ToString())
 	for {
 		if t.IsRoot() {
-			fmt.Println("-- giving up")
+			//fmt.Println("-- giving up")
 			return
 		}
 		if t.isLeftChild() {
-			fmt.Printf("-- found junction: %s\n", t.parent.ToString())
+			//fmt.Printf("-- found junction: %s\n", t.parent.ToString())
 			t = t.parent.right
 			break;
 		}
@@ -215,10 +243,10 @@ func (t *Tree) explodeRight(value int) {
 
 	for {
 		if t.IsNode() {
-			fmt.Printf("-- descending left leg: %s\n", t.left.ToString())
+			//fmt.Printf("-- descending left leg: %s\n", t.left.ToString())
 			t = t.left
 		} else {
-			fmt.Printf("-- found leftmost: %d + %d => %d\n", t.value, value, t.value + value)
+			//fmt.Printf("-- found leftmost: %d + %d => %d\n", t.value, value, t.value + value)
 			t.value += value
 			return
 		}
