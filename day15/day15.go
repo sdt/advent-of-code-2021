@@ -3,7 +3,6 @@ package main
 import (
 	"advent-of-code/aoc"
 	"fmt"
-	"math"
 )
 
 type Cavern struct {
@@ -20,49 +19,71 @@ func main() {
 	cavern := parseCavern(aoc.GetInputLines(filename))
 
 	fmt.Println(part1(&cavern))
+
+	bigCavern := cavern.expand(5)
+	fmt.Println(part1(&bigCavern))
 }
 
 func part1(cavern *Cavern) int {
-	// initialise the lowest grid with maxint, with a one square border all
-	// around containing zeros
-	lowest := cavern.makeGrid(math.MaxInt)
+	lowest := cavern.makeGrid(9999)
 
 	//printGrid(cavern.rows + 2, cavern.cols + 2, cavern.riskLevel)
 	//printGrid(cavern.rows + 2, cavern.cols + 2, lowest)
 
+	posStack := make([]int, cavern.rows * cavern.cols)
+	stackTop := 0
 	w := cavern.cols + 2
-	h := cavern.rows + 2
-
 	start := w + 1
+
+	lowest[start] = 0
+	posStack[stackTop] = start
+	stackTop++
+
+	hDelta := 1
+	vDelta := cavern.cols + 2
+
+	for stackTop > 0 {
+		stackTop--
+		pos := posStack[stackTop]
+		pathRiskLevel := lowest[pos]
+
+		p := pos + hDelta
+		if nextRiskLevel := cavern.riskLevel[p]; nextRiskLevel > 0 {
+			if riskLevel := pathRiskLevel + nextRiskLevel; riskLevel < lowest[p] {
+				lowest[p] = riskLevel
+				posStack[stackTop] = p
+				stackTop++
+			}
+		}
+		p = pos + vDelta
+		if nextRiskLevel := cavern.riskLevel[p]; nextRiskLevel > 0 {
+			if riskLevel := pathRiskLevel + nextRiskLevel; riskLevel < lowest[p] {
+				lowest[p] = riskLevel
+				posStack[stackTop] = p
+				stackTop++
+			}
+		}
+		p = pos - hDelta
+		if nextRiskLevel := cavern.riskLevel[p]; nextRiskLevel > 0 {
+			if riskLevel := pathRiskLevel + nextRiskLevel; riskLevel < lowest[p] {
+				lowest[p] = riskLevel
+				posStack[stackTop] = p
+				stackTop++
+			}
+		}
+		p = pos - vDelta
+		if nextRiskLevel := cavern.riskLevel[p]; nextRiskLevel > 0 {
+			if riskLevel := pathRiskLevel + nextRiskLevel; riskLevel < lowest[p] {
+				lowest[p] = riskLevel
+				posStack[stackTop] = p
+				stackTop++
+			}
+		}
+	}
+
+	h := cavern.rows + 2
 	end := w * (h-1) - 2
-	walkLowestRiskLevel(start, 0, lowest, cavern)
-
-	//printGrid(cavern.rows + 2, cavern.cols + 2, lowest)
-
-	return lowest[end] - cavern.riskLevel[start]
-}
-
-func walkLowestRiskLevel(pos, riskLevel int, lowest []int, cavern *Cavern) {
-	lowestRiskLevel := lowest[pos]
-	if lowestRiskLevel == 0 {
-		return // off the map
-	}
-
-	riskLevel += cavern.riskLevel[pos]
-	if riskLevel >= lowestRiskLevel {
-		return // this is no better than previous
-	}
-
-	// We've found a better path to this square
-	lowest[pos] = riskLevel
-
-	h := 1
-	v := cavern.cols + 2
-
-	walkLowestRiskLevel(pos + h, riskLevel, lowest, cavern) // right
-	walkLowestRiskLevel(pos + v, riskLevel, lowest, cavern) // down
-	walkLowestRiskLevel(pos - h, riskLevel, lowest, cavern) // left
-	walkLowestRiskLevel(pos - v, riskLevel, lowest, cavern) // up
+	return lowest[end]
 }
 
 func (c *Cavern) makeGrid(value int) []int {
@@ -81,6 +102,31 @@ func (c *Cavern) makeGrid(value int) []int {
 func (c *Cavern) index(row, col int) int {
 	// Take the borders into account here
 	return (row + 1) * (c.cols + 2) + col + 1
+}
+
+func (c *Cavern) expand(factor int) Cavern {
+	rows := c.rows * factor
+	cols := c.cols * factor
+	riskLevel := make([]int, (rows + 2) * (cols + 2))
+	newCavern := Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
+
+	for row := 0; row < c.rows; row++ {
+		for col := 0; col < c.cols; col++ {
+			value := c.riskLevel[c.index(row, col)];
+			for drow := 0; drow < factor; drow++ {
+				for dcol := 0; dcol < factor; dcol++ {
+					dvalue := value + drow + dcol
+					if dvalue > 9 {
+						dvalue -= 9
+					}
+					index := newCavern.index(drow * c.rows + row, dcol * c.cols + col)
+					newCavern.riskLevel[index] = dvalue
+				}
+			}
+		}
+	}
+
+	return newCavern
 }
 
 func parseCavern(lines []string) Cavern {
@@ -105,7 +151,7 @@ func printGrid(rows, cols int, cell []int) {
 	i := 0
 	for row := 0; row < rows; row++ {
 		for col := 0; col < cols; col++ {
-			fmt.Printf("%3d ", cell[i])
+			fmt.Printf("%d ", cell[i])
 			i++
 		}
 		fmt.Printf("\n")
