@@ -9,9 +9,8 @@ import (
 func main() {
 	image, enhancer := ParseInput(aoc.GetFilename())
 
-	fmt.Println(enhancer)
-
 	fmt.Println(part1(image, enhancer))
+	fmt.Println(part2(image, enhancer))
 }
 
 //------------------------------------------------------------------------------
@@ -22,13 +21,21 @@ func part1(image Image, enhancer Enhancer) int {
 	return len(image.pixmap)
 }
 
+func part2(image Image, enhancer Enhancer) int {
+	for i := 0; i < 25; i++ {
+		image = image.EnhanceTwice(enhancer, 2)
+	}
+
+	return len(image.pixmap)
+}
+
 //------------------------------------------------------------------------------
 
 type Pixel byte
 
 const (
 	Off Pixel = '.'
-	On = '#'
+	On        = '#'
 )
 
 type Coord struct {
@@ -38,7 +45,7 @@ type Coord struct {
 type Pixmap map[Coord]bool
 
 func (this *Pixmap) SetPixel(x, y int, pixel Pixel) {
-	if (pixel == On) {
+	if pixel == On {
 		(*this)[Coord{x: x, y: y}] = true
 	}
 }
@@ -56,7 +63,7 @@ func (this *Pixmap) EnhancePixel(x, y int, enhancer Enhancer) Pixel {
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			address = address << 1
-			if this.GetPixel(x + dx, y + dy) == On {
+			if this.GetPixel(x+dx, y+dy) == On {
 				address |= 1
 			}
 		}
@@ -70,8 +77,8 @@ func (this *Pixmap) EnhancePixelTwice(x, y int, enhancer Enhancer) Pixel {
 
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
-			pixmap.SetPixel(x + dx, y + dy,
-				this.EnhancePixel(x + dx, y + dy, enhancer))
+			pixmap.SetPixel(x+dx, y+dy,
+				this.EnhancePixel(x+dx, y+dy, enhancer))
 		}
 	}
 
@@ -79,8 +86,8 @@ func (this *Pixmap) EnhancePixelTwice(x, y int, enhancer Enhancer) Pixel {
 }
 
 func (this Pixmap) Extents() (Coord, Coord) {
-	min := Coord{x:math.MaxInt, y:math.MaxInt}
-	max := Coord{x:math.MinInt, y:math.MinInt}
+	min := Coord{x: math.MaxInt, y: math.MaxInt}
+	max := Coord{x: math.MinInt, y: math.MinInt}
 
 	for coord, _ := range this {
 		if coord.x < min.x {
@@ -100,7 +107,7 @@ func (this Pixmap) Extents() (Coord, Coord) {
 }
 
 type Image struct {
-	pixmap Pixmap
+	pixmap   Pixmap
 	min, max Coord
 }
 
@@ -109,8 +116,8 @@ type Enhancer []Pixel
 func (this Image) Enhance(enhancer Enhancer, extra int) Image {
 	pixmap := make(Pixmap)
 
-	for y := this.min.y-extra; y <= this.max.y+extra; y++ {
-		for x := this.min.x-extra; x <= this.max.x+extra; x++ {
+	for y := this.min.y - extra; y <= this.max.y+extra; y++ {
+		for x := this.min.x - extra; x <= this.max.x+extra; x++ {
 			pixmap.SetPixel(x, y, this.pixmap.EnhancePixel(x, y, enhancer))
 		}
 	}
@@ -121,8 +128,8 @@ func (this Image) Enhance(enhancer Enhancer, extra int) Image {
 func (this Image) EnhanceTwice(enhancer Enhancer, extra int) Image {
 	pixmap := make(Pixmap)
 
-	for y := this.min.y-extra; y <= this.max.y+extra; y++ {
-		for x := this.min.x-extra; x <= this.max.x+extra; x++ {
+	for y := this.min.y - extra; y <= this.max.y+extra; y++ {
+		for x := this.min.x - extra; x <= this.max.x+extra; x++ {
 			pixmap.SetPixel(x, y, this.pixmap.EnhancePixelTwice(x, y, enhancer))
 		}
 	}
@@ -132,8 +139,8 @@ func (this Image) EnhanceTwice(enhancer Enhancer, extra int) Image {
 
 func (this Image) Print(msg string) {
 	fmt.Println(msg)
-	for y := this.min.y-1; y <= this.max.y+1; y++ {
-		for x := this.min.x-1; x <= this.max.x+1; x++ {
+	for y := this.min.y - 1; y <= this.max.y+1; y++ {
+		for x := this.min.x - 1; x <= this.max.x+1; x++ {
 			fmt.Printf("%c", this.pixmap.GetPixel(x, y))
 		}
 		fmt.Println("")
