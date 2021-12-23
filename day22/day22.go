@@ -19,10 +19,9 @@ func part1(bounds Cuboid, steps []Step) int {
 
 	for _, step := range steps {
 		if step.cuboid.Overlaps(&bounds) {
+			cuboids = SplitCuboids(cuboids, step.cuboid)
 			if step.isOn {
-				cuboids = TurnOn(cuboids, step.cuboid)
-			} else {
-				cuboids = TurnOff(cuboids, step.cuboid)
+				cuboids = append(cuboids, step.cuboid)
 			}
 		}
 	}
@@ -38,12 +37,10 @@ func part2(steps []Step) int {
 	cuboids := make([]Cuboid, 0)
 
 	for _, step := range steps {
+		cuboids = SplitCuboids(cuboids, step.cuboid)
 		if step.isOn {
-			cuboids = TurnOn(cuboids, step.cuboid)
-		} else {
-			cuboids = TurnOff(cuboids, step.cuboid)
+			cuboids = append(cuboids, step.cuboid)
 		}
-		//fmt.Printf("After %#v, %d cuboids remain\n", step, len(cuboids))
 	}
 
 	total := 0
@@ -53,45 +50,16 @@ func part2(steps []Step) int {
 	return total
 }
 
-func TurnOn(disjointCuboids []Cuboid, cuboid Cuboid) []Cuboid {
-	fragments := []Cuboid{ cuboid }
-
-	// Apply the fragments to each cuboid in turn.
-	// If the fragment overlaps the cuboid, split it against the cuboid,
-	// and add those sub-fragments to the fragments.
-	// When we get to the end of the cuboids, add any remaining sub-fragments
-	// to the cuboid list.
-
-	for _, disjoint := range disjointCuboids {
-
-		nextFragments := make([]Cuboid, 0)
-		for _, fragment := range fragments {
-			if disjoint.Overlaps(&fragment) {
-				remaining := disjoint.Split(&fragment)
-				nextFragments = append(nextFragments, remaining...)
-			} else {
-				nextFragments = append(nextFragments, fragment)
-			}
-		}
-		fragments = nextFragments
-	}
-
-	disjointCuboids = append(disjointCuboids, fragments...)
-
-	return disjointCuboids
-}
-
-func TurnOff(in []Cuboid, cuboid Cuboid) []Cuboid {
+func SplitCuboids(in []Cuboid, splitter Cuboid) []Cuboid {
 	out := make([]Cuboid, 0)
 
-	// Apply the turn-off cuboid to each input fragments in turn.
-	// If the turn-off cuboid overlaps the input cuboid, split the input cuboid,
-	// otherwise keep the entire input cuboid. Leave the turn-off cuboid
-	// untouched.
+	// Apply the splitter turn-off cuboid to each input fragments in turn.
+	// If the splitter cuboid overlaps the input cuboid, split the input cuboid,
+	// otherwise keep the entire input cuboid. Leave the splitter untouched.
 
 	for _, inputCuboid := range in {
-		if cuboid.Overlaps(&inputCuboid) {
-			fragments := cuboid.Split(&inputCuboid)
+		if splitter.Overlaps(&inputCuboid) {
+			fragments := splitter.Split(&inputCuboid)
 			out = append(out, fragments...)
 		} else {
 			out = append(out, inputCuboid)
@@ -102,7 +70,7 @@ func TurnOff(in []Cuboid, cuboid Cuboid) []Cuboid {
 }
 
 type Point struct {
-	v [3]int	// x y z
+	v [3]int // x y z
 }
 
 func MakePoint(x, y, z int) Point {
@@ -115,7 +83,7 @@ type Cuboid struct {
 
 type Step struct {
 	cuboid Cuboid
-	isOn bool
+	isOn   bool
 }
 
 func (this Step) GoString() string {
@@ -135,8 +103,8 @@ func MakeCube(size int) Cuboid {
 }
 
 func MakeCuboid(xmin, xmax, ymin, ymax, zmin, zmax int) Cuboid {
-	return Cuboid{ min: MakePoint(xmin, ymin, zmin),
-				   max: MakePoint(xmax, ymax, zmax) }
+	return Cuboid{min: MakePoint(xmin, ymin, zmin),
+		max: MakePoint(xmax, ymax, zmax)}
 }
 
 func (this *Cuboid) IsValid() bool {
@@ -228,11 +196,11 @@ func (this *Cuboid) Combine(that *Cuboid, doAdd bool) []Cuboid {
 				}
 
 				if doAdd {
-					if (subCuboid.Overlaps(this) || subCuboid.Overlaps(that)) {
+					if subCuboid.Overlaps(this) || subCuboid.Overlaps(that) {
 						subCuboids = append(subCuboids, subCuboid)
 					}
 				} else {
-					if (subCuboid.Overlaps(this) && !subCuboid.Overlaps(that)) {
+					if subCuboid.Overlaps(this) && !subCuboid.Overlaps(that) {
 						subCuboids = append(subCuboids, subCuboid)
 					}
 				}
@@ -278,8 +246,8 @@ func ParseStep(line string) Step {
 
 	v := make([]int, 6)
 	for i := 0; i < 6; i++ {
-		v[i] = aoc.ParseInt(matches[i + 2])
+		v[i] = aoc.ParseInt(matches[i+2])
 	}
 
-	return Step{cuboid: MakeCuboid(v[0], v[1]+1, v[2], v[3]+1, v[4], v[5]+1), isOn: isOn }
+	return Step{cuboid: MakeCuboid(v[0], v[1]+1, v[2], v[3]+1, v[4], v[5]+1), isOn: isOn}
 }
