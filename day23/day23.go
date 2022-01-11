@@ -381,46 +381,27 @@ func NewBurrow(filename string, isPart2 bool) Burrow {
 func (this Burrow) Solve() Energy {
 	solution := NewBurrowSolution()
 
-	attempts := 0
-
-	/*
-	this.Draw(0x00000000000)
-	this.Draw(0x00101010100)
-	this.Draw(0x00202020200)
-	return Energy(0)
-	*/
-
 	for {
 		path, found := solution.Next()
 
 		if !found {
-			//fmt.Printf("No solution found after %d attempts\n", attempts)
-			panic("whoops")
+			panic("No solution found")
 		}
-		attempts++
-
-		//fmt.Printf("\nAttempt %d: trying %d %s\n", attempts, path.energy, this.String(path.burrowState))
-		//this.Draw(path.burrowState)
 
 		if this.IsSolution(path.burrowState) {
-			fmt.Printf("Solution: %d after %d attempts\n", path.energy, attempts)
 			return path.energy
 		}
 
 		for pos, roomType := range this.hallway.roomType {
-			//display := amphipodToDisplay(roomType)
 			if roomType == Empty {
 				// This is a regular hallway square
 				amphipod := path.burrowState.GetAmphipod(pos)
 				if amphipod == Empty {
-					//fmt.Printf("Pos %d is empty hallway\n", pos)
 					continue // nothing in this square
 				}
-				//fmt.Printf("Pos %d is hallway with a %c\n", pos, amphipod.Display())
 				this.TryMoveFromHallway(&solution, path, pos, amphipod)
 			} else {
 				// This is a room
-				//fmt.Printf("Pos %d is a %c room\n", pos, roomType.Display())
 				this.TryMoveFromRoom(&solution, path, pos, roomType)
 			}
 		}
@@ -440,7 +421,6 @@ func (this Burrow) TryMoveFromHallway(burrowSolution *BurrowSolution, path *Path
 	roomState := path.burrowState.GetRoomState(roomPos)
 
 	if !this.room[roomIndex].CanEnter(roomState) {
-		//fmt.Printf("Cannot enter room %c at %d\n", amphipod.Display(), amphipod.hallwayPos())
 		return
 	}
 
@@ -451,7 +431,6 @@ func (this Burrow) TryMoveFromHallway(burrowSolution *BurrowSolution, path *Path
 
 		dist += this.room[roomIndex].EnterDistance(roomState)
 
-		//fmt.Printf("Move %c at %d into room at %d: %s -> %s", amphipod.Display(), pos, roomPos, this.String(path.burrowState), this.String(burrowState))
 		burrowSolution.Add(burrowState, path, amphipod.energy(dist))
 	}
 }
@@ -479,12 +458,10 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 		roomType := this.hallway.roomType[leftPos]
 		if roomType == Empty {
 			if path.burrowState.GetAmphipod(leftPos) != Empty {
-				//fmt.Printf("Left scan %c stops at %d\n", amphipod.Display(), leftPos)
 				break // hallway is blocked
 			}
 			// We are in a hallway and we can stop here
 			next := burrowState.SetAmpipod(leftPos, amphipod)
-			//fmt.Printf("Left scan %c from %d lands at hallway pos %d: %s -> %s", amphipod.Display(), pos, leftPos, this.String(path.burrowState), this.String(next))
 			burrowSolution.Add(next, path, amphipod.energy(dist + pos - leftPos))
 		} else if roomType == amphipod {
 			// This is our home room
@@ -492,12 +469,10 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 			toRoomIndex = amphipod.roomIndex()
 
 			if !this.room[toRoomIndex].CanEnter(toRoomState) {
-				//fmt.Printf("Left scan %c cannot enter room at %d\n", amphipod.Display(), leftPos)
 				continue
 			}
 
 			next := burrowState.NextRoomState(leftPos)
-			//fmt.Printf("Left scan %c from %d lands at in room %d: %s -> %s", amphipod.Display(), pos, leftPos, this.String(path.burrowState), this.String(next))
 			burrowSolution.Add(next, path, amphipod.energy(dist + pos - leftPos + this.room[toRoomIndex].EnterDistance(toRoomState)))
 		}
 	}
@@ -507,12 +482,10 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 		roomType := this.hallway.roomType[rightPos]
 		if roomType == Empty {
 			if path.burrowState.GetAmphipod(rightPos) != Empty {
-				//fmt.Printf("Right scan %c stops at %d\n", amphipod.Display(), rightPos)
 				break // hallway is blocked
 			}
 			// We are in a hallway and we can stop here
 			next := burrowState.SetAmpipod(rightPos, amphipod)
-			//fmt.Printf("Right scan %c from %d lands at hallway pos %d: %s -> %s", amphipod.Display(), pos, rightPos, this.String(path.burrowState), this.String(next))
 			burrowSolution.Add(next, path, amphipod.energy(dist + rightPos - pos))
 		} else if roomType == amphipod {
 			// This is our home room
@@ -520,12 +493,10 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 			toRoomIndex = amphipod.roomIndex()
 
 			if !this.room[toRoomIndex].CanEnter(toRoomState) {
-				//fmt.Printf("Right scan %c cannot enter room at %d\n", amphipod.Display(), rightPos)
 				continue
 			}
 
 			next := burrowState.NextRoomState(rightPos)
-			//fmt.Printf("Right scan %c from %d lands at in room %d: %s -> %s", amphipod.Display(), pos, rightPos, this.String(path.burrowState), this.String(next))
 			burrowSolution.Add(next, path, amphipod.energy(dist + rightPos - pos + this.room[toRoomIndex].EnterDistance(toRoomState)))
 		}
 	}
@@ -618,7 +589,6 @@ func (this *BurrowSolution) Next() (*Path, bool) {
 }
 
 func (this *BurrowSolution) Add(burrowState BurrowState, prev *Path, energy Energy) {
-	//fmt.Printf(" energy %d + %d -> %d\n", prev.energy, energy, prev.energy + energy)
 	energy += prev.energy
 	if bestEnergy, found := this.bestEnergy[burrowState]; found {
 		if energy >= bestEnergy {
@@ -649,10 +619,11 @@ func (this *BurrowSolution) Swap(i, j int) {
 //------------------------------------------------------------------------------
 
 func main() {
-	burrow := NewBurrow(aoc.GetFilename(), !false)
-	fmt.Println(burrow)
+	part1 := NewBurrow(aoc.GetFilename(), false)
+	fmt.Println(part1.Solve())
 
-	burrow.Solve()
+	part2 := NewBurrow(aoc.GetFilename(), true)
+	fmt.Println(part2.Solve())
 }
 
 //------------------------------------------------------------------------------
