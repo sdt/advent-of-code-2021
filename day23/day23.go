@@ -5,271 +5,554 @@ import (
 	"fmt"
 )
 
-const Width = 13
-const XMax = Width-1
-const Height = 5
-const YMax = Height-1
+type Display byte
 
-const HallY = 1
-const Home1Y = 2
-const Home0Y = 3
+type Amphipod uint8	// 5 values -> 3 bits wide (use 4 to match RoomState)
 
-type Coord int8
-type Index uint8
-type Amphipod uint8
+var energyFactor []Energy = []Energy{ 0, 1, 10, 100, 1000 }
 
-type Point struct {
-	index Index
+func (this Amphipod) energy(distance int) Energy {
+	if this == Empty {
+		panic("EMPTY ENERGY?")
+	}
+	return Energy(distance) * energyFactor[this]
 }
 
-func MakePoint(x, y Coord) Point {
-	return Point{index: Index(y << 4 | x)}
+func (this Amphipod) roomIndex() int {
+	return int(this) - 1
 }
 
-func (point Point) x() Coord {
-	return Coord(point.index & 0xf)
-}
-
-func (point Point) y() Coord {
-	return Coord((point.index >> 4) & 0xf)
-}
-
-func (point Point) move(dir Point) Point {
-	return MakePoint(point.x() + dir.x(), point.y() + dir.y())
-}
-
-func (point Point) up() Point {
-	return Point{index: point.index - 16}
-}
-
-func (point Point) down() Point {
-	return Point{index: point.index + 16}
-}
-
-func (point Point) left() Point {
-	return Point{index: point.index - 1}
-}
-
-func (point Point) right() Point {
-	return Point{index: point.index + 1}
-}
-
-func (point Point) String() string {
-	return fmt.Sprintf("%d,%d", point.x(), point.y())
+func (this Amphipod) hallwayPos() int {
+	return this.roomIndex() * 2 + 2
 }
 
 const (
-	A Amphipod = iota
-	B
-	C
-	D
+	Empty Amphipod = iota
+	Amber
+	Bronze
+	Copper
+	Desert
 )
 
-/*
-	Cell indexes
-#############					*---> +X
-#0..........#	 0 .. 10		|
-###B#C#B#D###	11 .. 14		|
-  #A#D#C#A#		15 .. 18		V +Y
-  #########
-   2 4 6 8
-               111
-   X 0123456789012
-Y 0  #############
-  1  #...........#
-  2  ###B#C#B#D###
-  3    #A#D#C#A#
-  4    #########
-*/
-
-type State struct {
-	point [8]Point
-}
-
-type EnergyLevel int
-
-type StateTracker struct {
-	best map[State]EnergyLevel
-	queue []*Path
-}
-
-func MakeStateTracker() StateTracker {
-	return StateTracker{best: make(map[State]EnergyLevel)}
-}
-
-type Path struct {
-	state State
-	energy EnergyLevel
-}
-
-func (this *Path) Extend(index int, pos Point, distance int) Path {
-	state := State{}
-	for i, value := range this.state.point {
-		state.point[i] = value
+func (amphipod Amphipod) Display() Display {
+	if amphipod == Empty {
+		return '.'
 	}
-	state.point[index] = pos
-	state.Normalise()
-
-	amphipod, _ := MakeAmphipod(index)
-	energy := this.energy + EnergyLevel(distance * energyFactor[amphipod])
-
-	return Path{state: state, energy: energy}
+	return 'A' + Display(amphipod) - 1
 }
 
-func (this *StateTracker) IsHigherPriority(i, j int) bool {
-	return this.queue[i].energy < this.queue[j].energy
+func (display Display) Amphipod() Amphipod {
+	return Amphipod(display - 'A' + 1)
 }
 
-func (this *StateTracker) IsValid(i int) bool {
-	return (i >= 0) && (i < len(this.queue))
+type Energy uint32
+
+//------------------------------------------------------------------------------
+
+// Say our room is the A room, and starts like this: #BACD
+// There's only nine states this room can be in:
+//
+//	            CanLeave CanEnter Final Distance
+//	0: #BACD.	T        -        -     1
+//  1: #BAC..	T        -        -     2
+//  2: #BA...   T        -        -     3
+//  3: #B....   T        -        -     4
+//  4: #.....   -        T        -     4
+//  5: #A....   -        T        -     3
+//  6: #AA...   -        T        -     2
+//  7: #AAA..   -        T        -     1
+//  8: #AAAA.   -        -        T     -
+//
+// For a room that starts partially complete, we can build the states as if the
+// leading matches weren't there. For the #AABC. case, this works out the same
+// as if we had just #BC. The states and the distances match.
+//
+//	            CanLeave CanEnter Final Distance
+//  0: #AABC.   T        -        -     1
+//  1: #AAB..   T        -        -     2
+//  2: #AA...   -        T        -     2
+//  3: #AAA..   -        T        -     1
+//  4: #AAAA.   -        -        T     -
+//
+// Final == !( CanLeave || CanEnter )
+
+// offset freeSlots before after total
+// 0      4			4      4     9
+// 1      3         3      3     7
+// 2      2         2      2     5
+// 3      1         1      1     3
+// 4      0         0      0     1
+
+type RoomState uint8	// 9 of these -> 4 bits
+
+type Room struct {
+	roomType  Amphipod		// which is the home type for this room
+	amphipod  []Amphipod	// #BACD. -> DCAB - index matches state
+	freeSlots int			// how many amphipods start in the home position
 }
 
-func (this *StateTracker) Swap(i, j int) {
-	this.queue[i], this.queue[j] = this.queue[j], this.queue[i]
-}
-
-func (this *StateTracker) Add(state State, energy EnergyLevel) {
-	if existingEnergy, found := this.best[state]; found {
-		if existingEnergy < energy {
-			return	// we already have a better path to this state
+func NewRoom(roomType Amphipod, amphipod []Amphipod) Room {
+	var freeSlots int
+	for freeSlots = len(amphipod); freeSlots > 0; freeSlots-- {
+		if amphipod[freeSlots - 1] != roomType {
+			break
 		}
 	}
 
-	this.best[state] = energy
-	this.queue = append(this.queue, &Path{state, energy})
-	upheap(this, len(this.queue)-1)
+	return Room{roomType, amphipod, freeSlots}
 }
 
-func (this *StateTracker) Next() (path *Path, found bool) {
-	for len(this.queue) > 0 {
-		path := this.queue[0]
-		size := len(this.queue)
-		this.queue[0] = this.queue[size-1]
-		this.queue = this.queue[0:size-1]
-		downheap(this, 0)
+func (this Room) CanLeave(state RoomState) bool {
+	return int(state) < this.freeSlots
+}
 
-		if path.energy == this.best[path.state] {
-			return path, true
+func (this Room) CanEnter(state RoomState) bool {
+	return int(state) >= this.freeSlots && int(state) < (this.freeSlots * 2)
+}
+
+func (this Room) IsFinal(state RoomState) bool {
+	return int(state) == this.freeSlots * 2
+}
+
+func (this Room) FinalState() RoomState {
+	return RoomState(this.freeSlots * 2)
+}
+
+func (this Room) LeaveDistance(state RoomState) int {
+	// Assuming can leave. ie state in [0, freeSlots)
+	return int(state) + 1
+}
+
+func (this Room) EnterDistance(state RoomState) int {
+	// Assuming can enter. ie state in [freeSlots, freeSlots*2)
+	return this.freeSlots * 2 - int(state)
+}
+
+func (this Room) Amphipod(state RoomState) Amphipod {
+	// Assuming can leave. ie state in [0, freeSlots]
+	return this.amphipod[state]
+}
+
+func (this Burrow) String(burrowState BurrowState) string {
+	s := ""
+	for i, roomType := range this.hallway.roomType {
+		if roomType == Empty {
+			amphipod := burrowState.GetAmphipod(i)
+			s += fmt.Sprintf("%c", amphipod.Display())
+		} else {
+			roomState := burrowState.GetRoomState(i)
+			s += fmt.Sprintf("%d", roomState)
 		}
-
-		// A better path to this state has already been tried, keep looking
 	}
-	return nil, false
+	return s
 }
+
+func (this Burrow) Draw(burrowState BurrowState) {
+	for i, roomType := range this.hallway.roomType {
+		if roomType == Empty {
+			amphipod := burrowState.GetAmphipod(i)
+			fmt.Printf("%c", amphipod.Display())
+		} else {
+			roomState := burrowState.GetRoomState(i)
+			fmt.Printf("%d", roomState)
+		}
+	}
+	fmt.Print("\n")
+	/*
+	for pos, roomType := range this.hallway.roomType {
+		if roomType == Empty {
+			amphipod := burrowState.GetAmphipod(pos)
+			fmt.Printf("%c", amphipod.Display())
+		} else {
+			fmt.Print(".")
+		}
+	}
+	fmt.Print("\n")
+
+	for row := len(this.room[0].amphipod) - 1; row >= 0; row-- {
+		for pos, roomType := range this.hallway.roomType {
+			if roomType == Empty {
+				fmt.Print("#")
+			} else {
+				roomIndex := roomType.roomIndex()
+				roomState := burrowState.GetRoomState(pos)
+				fmt.Printf("%c", this.room[roomIndex].Draw(roomState, row))
+			}
+		}
+		fmt.Print("\n")
+	}
+	fmt.Print("\n")
+	*/
+}
+
+
+// #3210
+// #DCBA freeslots = 4
+// State:   012345678 orig	new
+// Row 0/3: A.......A
+// Row 1/2: BB.....AA S < F-2		S > F+2
+// Row 2/1: CCC...AAA S < F-X		S > F+X
+// Row 3/0: DDDD.AAAA S < F-X			S > F
+//
+// #AADC
+// State: 01234
+// Row 0: AAAAA
+// Row 1: AAAAA
+// Row 2: DD.AA
+// Row 3: C...A
+
+func (this Room) Draw(state RoomState, row int) Display {
+	xrow := len(this.amphipod) - row - 1
+
+	used := len(this.amphipod) - this.freeSlots - 1
+	if int(state) < used - row {
+		return this.amphipod[xrow].Display()
+	}
+	if int(state) > used + row {
+		return this.roomType.Display()
+	}
+	return '.'
+}
+
+//------------------------------------------------------------------------------
+
+// Hallway has 7 valid positions, and four rooms.
+//  01x2x3x4x56
+// Each position contains an amphipod (or empty), which means 7x3=21 bits
+// Each rooms needs 4 bits, so that's 4x4 + 7x3 = 16 + 21 = 37 bits of state
 
 /*
-#############
-#ab.c.d.e.fg#
-###.#.#.#.###
-  #.#.#.#.#
-  #########
+    Pos		Type
+	  0		hall
+	  1		hall
+	  2		room A
+	  3		hall
+	  4		room B
+	  5		hall
+	  6		room C
+	  7		hall
+	  8		room D
+	  9		hall
+	 10		hall
 */
-var outDestinations = []Point{
-	MakePoint(1,  HallY),	// a
-	MakePoint(2,  HallY),	// b
-	MakePoint(4,  HallY),	// c
-	MakePoint(6,  HallY),	// d
-	MakePoint(8,  HallY),	// e
-	MakePoint(10, HallY),	// f
-	MakePoint(11, HallY),	// f
+
+
+type Hallway struct {
+	roomType  []Amphipod
+	roomIndex []int
 }
+
+func NewHallway() Hallway {
+	// Squares default to Empty - ie no Roomtype
+	roomType := make([]Amphipod, 11)
+
+	// Rooms are at ..2.4.6.8..
+	for i := 0; i < 4; i++ {
+		roomType[i * 2 + 2] = Amber + Amphipod(i)
+	}
+
+	roomIndex, hallIndex := 0, 0
+	index := make([]int, 11)
+	for i, roomType := range roomType {
+		if roomType == Empty {
+			index[i] = hallIndex
+			hallIndex++
+		} else {
+			index[i] = roomIndex
+			roomIndex++
+		}
+	}
+
+	return Hallway{roomType, index}
+}
+
+//------------------------------------------------------------------------------
 
 /*
-#############
-#...........#
-###a#c#e#g###
-  #b#d#f#h#
-  #########
+	Offset	Len		Descr
+	0		4		Hallway 0 state
+	4		4		Hallway 1 state
+	8		4		Room 0 state
+	12		4		Hallway 2 state
+	16		4		Room 1 state
+	20		4		Hallway 3 state
+	24		4		Room 2 state
+	28		4		Hallway 4 state
+	32		4		Room 3 state		// offset = room * 4
+	36		4		Hallway 5 state
+	40		4		Hallway 6 state		// offset = hallway * 3 + 16
+
+	44 bits total
 */
-var home = [][]Point {
-	[]Point{ MakePoint(3, Home0Y), MakePoint(3, Home1Y) },	// b a
-	[]Point{ MakePoint(5, Home0Y), MakePoint(5, Home1Y) },	// d c
-	[]Point{ MakePoint(7, Home0Y), MakePoint(7, Home1Y) },	// f e
-	[]Point{ MakePoint(9, Home0Y), MakePoint(9, Home1Y) },	// h g
+
+type BurrowState uint64
+
+func (burrowState BurrowState) ClearAmpipod(position int) BurrowState {
+	shift := position * 4
+	mask := BurrowState(0xf) << shift
+	return burrowState & ^mask
 }
 
-var energyFactor = []int{ 1, 10, 100, 1000 }
+func (burrowState BurrowState) SetAmpipod(position int, amphipod Amphipod) BurrowState {
+	shift := position * 4
+	mask := BurrowState(0xf) << shift
+	return (burrowState & ^mask) | BurrowState(amphipod) << shift
+}
+
+func (burrowState BurrowState) NextRoomState(position int) BurrowState {
+	shift := position * 4
+	incr := BurrowState(1) << shift
+	return burrowState + incr
+}
+
+func (burrowState BurrowState) GetRoomState(position int) RoomState {
+	shift := position * 4
+	return RoomState((burrowState >> shift) & 0xf)
+}
+
+func (burrowState BurrowState) SetRoomState(position int, roomState RoomState) BurrowState {
+	shift := position * 4
+	mask := BurrowState(0xf) << shift
+	return (burrowState & ^mask) | (BurrowState(roomState) << shift)
+}
+
+func (burrowState BurrowState) GetAmphipod(position int) Amphipod {
+	shift := position * 4
+	return Amphipod((burrowState >> shift) & 0xf)
+}
+
+//------------------------------------------------------------------------------
 
 type Burrow struct {
-	cell [Height * Width]byte
+	room       []Room
+	hallway    Hallway
+	finalState BurrowState
 }
 
-func (this *State) MakeBurrow() Burrow {
-	burrow := Burrow{}
-
-	for i, point := range this.point {
-		burrow.cell[point.index] = byte('A') + byte(i >> 1)
+func NewBurrow(filename string, isPart2 bool) Burrow {
+	amphipod := make([][]Amphipod, 4)
+	for i, _ := range amphipod {
+		amphipod[i] = []Amphipod{}
 	}
 
-	return burrow
-}
-
-func (this *State) IsHome(index int) bool {
-	amphipod, which := MakeAmphipod(index)
-
-	//fmt.Printf("Testing %c[%d] %v\n", 'A' + amphipod, which, this.point[index])
-
-	if this.point[index].x() != home[amphipod][which].x() {
-		return false
+	parseLine := func (line string) []byte {
+		value := make([]byte, 4)
+		for i := 0; i < 4; i++ {
+			value[i] = line[i * 2 + 3]
+		}
+		return value
 	}
 
-	if this.point[index].y() == Home0Y {
-		return true
+	lines := aoc.GetInputLines(filename)
+	rows := [][]byte{}
+
+	rows = append(rows, parseLine(lines[2]))
+	if isPart2 {
+		rows = append(rows, []byte{ 'D', 'C', 'B', 'A' })
+		rows = append(rows, []byte{ 'D', 'B', 'A', 'C' })
 	}
+	rows = append(rows, parseLine(lines[3]))
 
-	if this.point[index].y() != Home1Y {
-		return false
-	}
-
-	return this.IsHome(index ^ 1)
-}
-
-func (this *Burrow) CanReach(from, to Point) (int, bool) {
-	steps := 0
-
-	// First scan up to the hallway
-	for from.y() > HallY {
-		from = from.up()
-		steps++
-		if !this.IsClear(from) {
-			return steps, false
+	for _, row := range rows {
+		for i, value := range row {
+			amphipod[i] = append(amphipod[i], Display(value).Amphipod())
 		}
 	}
 
-	// Next scan across to the matching column
-	for from.x() < to.x() {
-		from = from.right()
-		steps++
-		if !this.IsClear(from) {
-			return steps, false
+	room := []Room{}
+	for roomType, occupants := range amphipod {
+		room = append(room, NewRoom(Amphipod(roomType+1), occupants))
+	}
+
+	hallway := NewHallway()
+	finalState := BurrowState(0)
+
+	for pos, roomType := range hallway.roomType {
+		if roomType != Empty {
+			roomIndex := roomType - 1
+			roomState := room[roomIndex].FinalState()
+			finalState = finalState.SetRoomState(pos, roomState)
 		}
 	}
 
-	for from.x() > to.x() {
-		from = from.left()
-		steps++
-		if !this.IsClear(from) {
-			return steps, false
-		}
-	}
-
-	// Finally scan down
-	for from.y() < to.y() {
-		from = from.down()
-		steps++
-		if !this.IsClear(from) {
-			return steps, false
-		}
-	}
-
-	return steps, true
+	return Burrow{room, hallway, finalState}
 }
 
-func (this *Burrow) IsClear(p Point) bool {
-	return this.cell[p.index] == 0
+func (this Burrow) Solve() Energy {
+	solution := NewBurrowSolution()
+
+	attempts := 0
+
+	/*
+	this.Draw(0x00000000000)
+	this.Draw(0x00101010100)
+	this.Draw(0x00202020200)
+	return Energy(0)
+	*/
+
+	for {
+		path, found := solution.Next()
+
+		if !found {
+			//fmt.Printf("No solution found after %d attempts\n", attempts)
+			panic("whoops")
+		}
+		attempts++
+
+		//fmt.Printf("\nAttempt %d: trying %d %s\n", attempts, path.energy, this.String(path.burrowState))
+		//this.Draw(path.burrowState)
+
+		if this.IsSolution(path.burrowState) {
+			fmt.Printf("Solution: %d after %d attempts\n", path.energy, attempts)
+			return path.energy
+		}
+
+		for pos, roomType := range this.hallway.roomType {
+			//display := amphipodToDisplay(roomType)
+			if roomType == Empty {
+				// This is a regular hallway square
+				amphipod := path.burrowState.GetAmphipod(pos)
+				if amphipod == Empty {
+					//fmt.Printf("Pos %d is empty hallway\n", pos)
+					continue // nothing in this square
+				}
+				//fmt.Printf("Pos %d is hallway with a %c\n", pos, amphipod.Display())
+				this.TryMoveFromHallway(&solution, path, pos, amphipod)
+			} else {
+				// This is a room
+				//fmt.Printf("Pos %d is a %c room\n", pos, roomType.Display())
+				this.TryMoveFromRoom(&solution, path, pos, roomType)
+			}
+		}
+	}
 }
 
-func sign(x Coord) Coord {
+func (this Burrow) IsSolution(burrowState BurrowState) bool {
+	return burrowState == this.finalState
+}
+
+func (this Burrow) TryMoveFromHallway(burrowSolution *BurrowSolution, path *Path, pos int, amphipod Amphipod) {
+	// We are looking at an amphipod in the hallway. It can only move home, and
+	// it can only do so if it's home room CanEnter, and if the route is clear.
+
+	roomIndex := amphipod.roomIndex()
+	roomPos := amphipod.hallwayPos()
+	roomState := path.burrowState.GetRoomState(roomPos)
+
+	if !this.room[roomIndex].CanEnter(roomState) {
+		//fmt.Printf("Cannot enter room %c at %d\n", amphipod.Display(), amphipod.hallwayPos())
+		return
+	}
+
+	// The room is suitable to enter. Can we get there?
+	if dist, canMove := this.CanMove(pos, roomPos, path.burrowState); canMove {
+		burrowState := path.burrowState.ClearAmpipod(pos)
+		burrowState = burrowState.NextRoomState(roomPos)
+
+		dist += this.room[roomIndex].EnterDistance(roomState)
+
+		//fmt.Printf("Move %c at %d into room at %d: %s -> %s", amphipod.Display(), pos, roomPos, this.String(path.burrowState), this.String(burrowState))
+		burrowSolution.Add(burrowState, path, amphipod.energy(dist))
+	}
+}
+
+func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, pos int, fromRoomType Amphipod) {
+
+	fromRoomState := path.burrowState.GetRoomState(pos)
+	fromRoomIndex := this.hallway.roomIndex[pos]
+	if !this.room[fromRoomIndex].CanLeave(fromRoomState) {
+		return
+	}
+
+	amphipod := this.room[fromRoomIndex].Amphipod(fromRoomState)
+
+	burrowState := path.burrowState.NextRoomState(pos)
+
+	toRoomPos   := amphipod.hallwayPos()
+	toRoomIndex := this.hallway.roomIndex[pos]
+	toRoomState := path.burrowState.GetRoomState(toRoomPos)
+
+	dist := this.room[fromRoomIndex].LeaveDistance(fromRoomState)
+
+	// Scan to the left.
+	for leftPos := pos - 1; leftPos >= 0; leftPos-- {
+		roomType := this.hallway.roomType[leftPos]
+		if roomType == Empty {
+			if path.burrowState.GetAmphipod(leftPos) != Empty {
+				//fmt.Printf("Left scan %c stops at %d\n", amphipod.Display(), leftPos)
+				break // hallway is blocked
+			}
+			// We are in a hallway and we can stop here
+			next := burrowState.SetAmpipod(leftPos, amphipod)
+			//fmt.Printf("Left scan %c from %d lands at hallway pos %d: %s -> %s", amphipod.Display(), pos, leftPos, this.String(path.burrowState), this.String(next))
+			burrowSolution.Add(next, path, amphipod.energy(dist + pos - leftPos))
+		} else if roomType == amphipod {
+			// This is our home room
+			toRoomState = path.burrowState.GetRoomState(leftPos)
+			toRoomIndex = amphipod.roomIndex()
+
+			if !this.room[toRoomIndex].CanEnter(toRoomState) {
+				//fmt.Printf("Left scan %c cannot enter room at %d\n", amphipod.Display(), leftPos)
+				continue
+			}
+
+			next := burrowState.NextRoomState(leftPos)
+			//fmt.Printf("Left scan %c from %d lands at in room %d: %s -> %s", amphipod.Display(), pos, leftPos, this.String(path.burrowState), this.String(next))
+			burrowSolution.Add(next, path, amphipod.energy(dist + pos - leftPos + this.room[toRoomIndex].EnterDistance(toRoomState)))
+		}
+	}
+
+	// Scan to the right.
+	for rightPos := pos + 1; rightPos < len(this.hallway.roomType); rightPos++ {
+		roomType := this.hallway.roomType[rightPos]
+		if roomType == Empty {
+			if path.burrowState.GetAmphipod(rightPos) != Empty {
+				//fmt.Printf("Right scan %c stops at %d\n", amphipod.Display(), rightPos)
+				break // hallway is blocked
+			}
+			// We are in a hallway and we can stop here
+			next := burrowState.SetAmpipod(rightPos, amphipod)
+			//fmt.Printf("Right scan %c from %d lands at hallway pos %d: %s -> %s", amphipod.Display(), pos, rightPos, this.String(path.burrowState), this.String(next))
+			burrowSolution.Add(next, path, amphipod.energy(dist + rightPos - pos))
+		} else if roomType == amphipod {
+			// This is our home room
+			toRoomState = path.burrowState.GetRoomState(rightPos)
+			toRoomIndex = amphipod.roomIndex()
+
+			if !this.room[toRoomIndex].CanEnter(toRoomState) {
+				//fmt.Printf("Right scan %c cannot enter room at %d\n", amphipod.Display(), rightPos)
+				continue
+			}
+
+			next := burrowState.NextRoomState(rightPos)
+			//fmt.Printf("Right scan %c from %d lands at in room %d: %s -> %s", amphipod.Display(), pos, rightPos, this.String(path.burrowState), this.String(next))
+			burrowSolution.Add(next, path, amphipod.energy(dist + rightPos - pos + this.room[toRoomIndex].EnterDistance(toRoomState)))
+		}
+	}
+}
+
+func (this Burrow) CanMove(from, to int, burrowState BurrowState) (int, bool) {
+	delta := sign(to - from)
+	for pos := from + delta; pos != to; pos += delta {
+		if this.hallway.roomType[pos] == Empty {
+			amphipod := burrowState.GetAmphipod(pos)
+			if amphipod != Empty {
+				return 0, false
+			}
+		}
+	}
+
+	return abs(to - from), true
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func sign(x int) int {
 	if x < 0 {
 		return -1
 	}
@@ -279,165 +562,100 @@ func sign(x Coord) Coord {
 	return 0
 }
 
-/*
-type Cell struct {
-	pos 		Point
-	cellType 	CellType
-	neighbours 	[]CellIndex
+//------------------------------------------------------------------------------
+
+type Path struct {
+	burrowState BurrowState
+	energy Energy
 }
 
-type CellPosTable map[Point]CellIndex
-var cellPosTable CellPosTable = make(CellPosTable)
-
-var cellTable []Cell = []Cell{
-	MakeCell( 1, 1, Hall,     1),			//  0
-	MakeCell( 2, 1, Hall,     0,  2),		//  1
-	MakeCell( 3, 1, Doorway,  1,  3, 11),	//  2
-	MakeCell( 4, 1, Hall,     2,  4),		//  3
-	MakeCell( 5, 1, Doorway,  3,  5, 12),	//  4
-	MakeCell( 6, 1, Hall,     4,  6),		//  5
-	MakeCell( 7, 1, Doorway,  5,  7, 13),	//  6
-	MakeCell( 8, 1, Hall,     6,  8),		//  7
-	MakeCell( 9, 1, Doorway,  7,  9, 14),	//  8
-	MakeCell(10, 1, Hall,     8, 10),		//  9
-	MakeCell(11, 1, Hall,     9),			// 10
-
-	MakeCell( 3, 2, HomeA0,   2, 15),		// 11
-	MakeCell( 5, 2, HomeB0,   4, 16),		// 12
-	MakeCell( 7, 2, HomeC0,   6, 17),		// 13
-	MakeCell( 9, 2, HomeD0,   8, 18),		// 14
-
-	MakeCell( 3, 3, HomeA1,   11),			// 15
-	MakeCell( 5, 3, HomeB1,   12),			// 16
-	MakeCell( 7, 3, HomeC1,   13),			// 17
-	MakeCell( 9, 3, HomeD1,   14),			// 18
+func NewPath(burrowState BurrowState, energy Energy) Path {
+	return Path{burrowState, energy}
 }
 
-func MakeCell(x, y int, cellType CellType, neighbours ...CellIndex) Cell {
-	return Cell{pos: Point{x: x, y: y}, cellType: cellType, neighbours: neighbours}
+type BurrowSolution struct {
+	bestEnergy map[BurrowState]Energy
+	queue []*Path
 }
-*/
 
-func main() {
-	state := ParseMaze(aoc.GetFilename())
-	tracker := MakeStateTracker()
+func NewBurrowSolution() BurrowSolution {
+	var burrowState BurrowState
 
-	tracker.Add(state, 0)
+	bestEnergy := make(map[BurrowState]Energy)
 
+	path := NewPath(burrowState, 0)
+	queue := []*Path{&path}
+
+	return BurrowSolution{bestEnergy, queue}
+}
+
+func (this *BurrowSolution) Next() (*Path, bool) {
+	// Loop until we find a path that we haven't already seen, or we run out.
 	for {
-		path, found := tracker.Next();
-		if !found {
-			panic("No more states")
+		if len(this.queue) == 0 {
+			return nil, false
 		}
-		//path.state.Print()
-		//fmt.Printf("Energy = %d\n\n", path.energy)
 
-		burrow := path.state.MakeBurrow()
+		path := this.queue[0]
 
-		homeCount := 0
-		for i, pos := range path.state.point {
-			amphipod, _ := MakeAmphipod(i)
+		last := len(this.queue) - 1
+		this.queue[0] = this.queue[last]
+		this.queue = this.queue[0:last]
 
-			if path.state.IsHome(i) {
-				homeCount++
-				continue // already home, no need to go anywhere
-			}
+		downheap(this, 0)
 
-			destinations := []Point{}
-
-			if burrow.IsClear(home[amphipod][0]) {
-				destinations = append(destinations, home[amphipod][0])
-			} else {
-				destinations = append(destinations, home[amphipod][1])
-			}
-
-			if pos.y() != HallY {
-				// Outbound
-				destinations = append(destinations, outDestinations...)
-			}
-
-			for _, to := range destinations {
-				if distance, canReach := burrow.CanReach(pos, to); canReach {
-					//fmt.Printf("%c can move from %v to %v (energy=%d)\n", 'A' + amphipod, pos, to, distance * energyFactor[amphipod])
-
-					next := path.Extend(i, to, distance)
-					tracker.Add(next.state, next.energy)
-				}
+		if bestEnergy, found := this.bestEnergy[path.burrowState]; found {
+			// We've seen this state before. Are we in a better state now?
+			if path.energy >= bestEnergy {
+				continue
 			}
 		}
 
-		if homeCount == 8 {
-			fmt.Println("Solved!")
-			fmt.Println("Energy=", path.energy)
+		this.bestEnergy[path.burrowState] = path.energy
+
+		return path, true
+	}
+}
+
+func (this *BurrowSolution) Add(burrowState BurrowState, prev *Path, energy Energy) {
+	//fmt.Printf(" energy %d + %d -> %d\n", prev.energy, energy, prev.energy + energy)
+	energy += prev.energy
+	if bestEnergy, found := this.bestEnergy[burrowState]; found {
+		if energy >= bestEnergy {
+			// Already have a same or better path to this state. Ignore it.
 			return
 		}
 	}
+
+	// This is either a new state, or an existing state with a lower energy.
+	path := NewPath(burrowState, energy)
+
+	this.queue = append(this.queue, &path)
+	upheap(this, len(this.queue)-1)
 }
 
-func MakeAmphipod(index int) (Amphipod, int) {
-	return Amphipod(index / 2), index & 1
+func (this *BurrowSolution) IsHigherPriority(parent, child int) bool {
+	return this.queue[parent].energy < this.queue[child].energy
 }
 
-func ParseMaze(filename string) State {
-	lines := aoc.GetInputLines(filename)
-
-	state := State{}
-	var count [4]int
-
-	for y, line := range lines {
-		for x, char := range line {
-			if char >= 'A' && char <= 'D' {
-				amphipod := int(A) + int(char - 'A')
-				index := amphipod * 2 + count[amphipod]
-				count[amphipod]++
-
-				state.point[index] = MakePoint(Coord(x), Coord(y))
-			}
-		}
-	}
-
-	state.Normalise()
-
-	return state
+func (this *BurrowSolution) IsValid(i int) bool {
+	return (i >= 0) && (i < len(this.queue))
 }
 
-// For each pair of AA BB CC DD, the lhs should have a lower index than rhs
-// Just so that 0123 matches 1032
-func (this *State) Normalise() {
-	for i := 0; i < 8; i += 2 {
-		if this.point[i].index > this.point[i+1].index {
-			this.point[i], this.point[i+1] = this.point[i+1], this.point[i]
-		}
-	}
+func (this *BurrowSolution) Swap(i, j int) {
+	this.queue[i], this.queue[j] = this.queue[j], this.queue[i]
 }
 
-func (this *State) Print() {
-	for y := Coord(0); y < Height; y++ {
-		for x := Coord(0); x < Width; x++ {
-			point := MakePoint(x, y)
-			fmt.Printf("%c", getMazePoint(this, point))
-		}
-		fmt.Print("\n")
-	}
+//------------------------------------------------------------------------------
+
+func main() {
+	burrow := NewBurrow(aoc.GetFilename(), !false)
+	fmt.Println(burrow)
+
+	burrow.Solve()
 }
 
-var baseMaze [5]string = [...]string{
-	"#############",
-	"#...........#",
-	"###.#.#.#.###",
-  	"  #.#.#.#.#  ",
-  	"  #########  ",
-}
-
-func getMazePoint(state *State, point Point) uint8 {
-	for i := 0; i < len(state.point); i++ {
-		if state.point[i] == point {
-			return uint8('A' + (i >> 1))
-		}
-	}
-
-	return baseMaze[point.y()][point.x()]
-}
+//------------------------------------------------------------------------------
 
 type Heap interface {
 	IsHigherPriority(parent, child int) bool
