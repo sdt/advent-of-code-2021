@@ -3,12 +3,14 @@ package main
 import (
 	"advent-of-code/aoc"
 	"fmt"
+	"math"
 	"regexp"
 )
 
 //------------------------------------------------------------------------------
 
 type Int int64
+const MaxInt = math.MaxInt64
 
 func (this Int) Abs() Int {
 	if this < 0 {
@@ -135,6 +137,28 @@ func (this *Cube) Split() []Cube {
 	return cubes
 }
 
+func MinDistanceFromOrigin(x0, size Int) Int {
+	// |  x0...x1 = x0
+	if x0 >= 0 {
+		return x0
+	}
+
+	// x0...x1  | = x1
+	x1 := x0 + size - 1
+	if x1 <= 0 {
+		return x1
+	}
+
+	// x0..|..x1 = 0
+	return 0
+}
+
+func (this *Cube) MinDistance() Int {
+	return MinDistanceFromOrigin(this.pos.x, this.size) +
+	       MinDistanceFromOrigin(this.pos.y, this.size) +
+	       MinDistanceFromOrigin(this.pos.z, this.size)
+}
+
 //------------------------------------------------------------------------------
 
 type Scanner struct {
@@ -172,12 +196,13 @@ func NewScanner(line string) Scanner {
 	return Scanner{pos, r}
 }
 
-func ParseInput(filename string) []Scanner {
+func ParseInput(filename string) []*Scanner {
 	lines := aoc.GetInputLines(filename)
 
-	scanners := make([]Scanner, 0, len(lines))
+	scanners := make([]*Scanner, 0, len(lines))
 	for _, line := range lines {
-		scanners = append(scanners, NewScanner(line))
+		scanner := NewScanner(line)
+		scanners = append(scanners, &scanner)
 	}
 
 	return scanners
@@ -195,7 +220,120 @@ func countScanners(scanners []Scanner, point Vec3) int {
 
 //------------------------------------------------------------------------------
 
-func makeInitialCube(scanners []Scanner) Cube {
+type Partial struct {
+	bbox Cube
+	insideScannerCount Int
+	overlappingScanners []*Scanner
+}
+
+func (this *Partial) PotentialCount() Int {
+	return this.insideScannerCount + Int(len(this.overlappingScanners))
+}
+
+func (this *Partial) IsComplete() bool {
+	return len(this.overlappingScanners) == 0
+}
+
+func (this *Partial) MinDistance() Int {
+	return this.bbox.MinDistance()
+}
+
+func (this *Partial) Split() []*Partial {
+	subCubes := this.bbox.Split()
+
+	children := make([]*Partial, 0, len(subCubes))
+
+	for _, subCube := range subCubes {
+		insideScannerCount := this.insideScannerCount
+		overlappingScanners := make([]*Scanner, 0)
+
+		for _, scanner := range this.overlappingScanners {
+			if subCube.IsFullyInside(scanner) {
+				insideScannerCount++
+			} else if subCube.IsFullyOutside(scanner) {
+				// skip this scanner
+			} else {
+				overlappingScanners = append(overlappingScanners, scanner)
+			}
+		}
+
+		partial := Partial{subCube, insideScannerCount, overlappingScanners}
+		children = append(children, &partial)
+	}
+
+	return children
+}
+
+//------------------------------------------------------------------------------
+
+type Agenda struct {
+	queue []*Partial
+}
+
+func (this *Agenda) Next() (*Partial, bool) {
+	if len(this.queue) == 0 {
+		return nil, false
+	}
+
+	next := this.queue[0]
+	this.queue[0] = this.queue[len(this.queue)-1]
+	this.queue = this.queue[0:len(this.queue)-1]
+	downheap(this, 0)
+
+	return next, true
+}
+
+func (this *Agenda) Add(partial *Partial) {
+	this.queue = append(this.queue, partial)
+	upheap(this, len(this.queue)-1)
+}
+
+func (this *Agenda) IsHigherPriority(parent, child int) bool {
+	p := this.queue[parent]
+	c := this.queue[child]
+
+	diff := p.PotentialCount() - c.PotentialCount()
+	if diff > 0 {
+		return true
+	} else if diff < 0{
+		return false
+	}
+
+	if p.insideScannerCount > c.insideScannerCount {
+		return true
+	}
+	if p.insideScannerCount < c.insideScannerCount {
+		return false
+	}
+
+	if len(p.overlappingScanners) > len(c.overlappingScanners) {
+		return true
+	}
+	if len(p.overlappingScanners) < len(c.overlappingScanners) {
+		return false
+	}
+
+	if p.bbox.size > c.bbox.size {
+		return true
+	}
+	if p.bbox.size < c.bbox.size {
+		return false
+	}
+
+	return p.bbox.MinDistance() < c.bbox.MinDistance()
+}
+
+func (this *Agenda) IsValid(i int) bool {
+	return i >= 0 && i < len(this.queue)
+}
+
+func (this *Agenda) Swap(i, j int) {
+	this.queue[i], this.queue[j] = this.queue[j], this.queue[i]
+}
+
+//------------------------------------------------------------------------------
+
+func makeInitialCube(scanners []*Scanner) Cube {
 	size := Int(1)
 
 	for _, scanner := range scanners {
@@ -231,13 +369,49 @@ func testCube(cube *Cube, scanner *Scanner) {
 
 //------------------------------------------------------------------------------
 
+func part2(scanners []*Scanner) Int {
+	cube := makeInitialCube(scanners)
+	partial := Partial{cube, 0, scanners}
+	agenda := Agenda{[]*Partial{&partial}}
+
+	attempt := 0
+	var best *Partial = nil
+
+	for {
+		partial, found := agenda.Next()
+		if !found {
+			return best.MinDistance()
+		}
+
+		attempt++
+		//fmt.Printf("Attempt %d: %v\n", attempt, partial)
+
+		if partial.IsComplete() {
+			if (best == nil) ||
+			    ((partial.insideScannerCount > best.insideScannerCount) &&
+				 (partial.MinDistance() < best.MinDistance())) {
+				best = partial
+
+				//fmt.Printf("New best: scanners=%d dist=%d\n", best.insideScannerCount, best.MinDistance())
+			}
+		} else {
+			partials := partial.Split()
+			for _, child := range partials {
+				if (best == nil) || (child.PotentialCount() >= best.insideScannerCount) {
+					agenda.Add(child)
+				}
+			}
+		}
+	}
+
+	return best.MinDistance()
+}
+
+//------------------------------------------------------------------------------
+
 func main() {
 	scanners := ParseInput(aoc.GetFilename())
-
-	cube := makeInitialCube(scanners)
-	fmt.Println(cube)
-
-	testCube(&cube, &scanners[4])
+	fmt.Println(part2(scanners))
 }
 
 //------------------------------------------------------------------------------
