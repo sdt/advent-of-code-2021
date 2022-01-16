@@ -7,9 +7,9 @@ import (
 
 type Display byte
 
-type Amphipod uint8	// 5 values -> 3 bits wide (use 4 to match RoomState)
+type Amphipod uint8 // 5 values -> 3 bits wide (use 4 to match RoomState)
 
-var energyFactor []Energy = []Energy{ 0, 1, 10, 100, 1000 }
+var energyFactor []Energy = []Energy{0, 1, 10, 100, 1000}
 
 func (this Amphipod) energy(distance int) Energy {
 	if this == Empty {
@@ -23,7 +23,7 @@ func (this Amphipod) roomIndex() int {
 }
 
 func (this Amphipod) hallwayPos() int {
-	return this.roomIndex() * 2 + 2
+	return this.roomIndex()*2 + 2
 }
 
 const (
@@ -83,18 +83,18 @@ type Energy uint32
 // 3      1         1      1     3
 // 4      0         0      0     1
 
-type RoomState uint8	// 9 of these -> 4 bits
+type RoomState uint8 // 9 of these -> 4 bits
 
 type Room struct {
-	roomType  Amphipod		// which is the home type for this room
-	amphipod  []Amphipod	// #BACD. -> DCAB - index matches state
-	freeSlots int			// how many amphipods start in the home position
+	roomType  Amphipod   // which is the home type for this room
+	amphipod  []Amphipod // #BACD. -> DCAB - index matches state
+	freeSlots int        // how many amphipods start in the home position
 }
 
 func NewRoom(roomType Amphipod, amphipod []Amphipod) Room {
 	var freeSlots int
 	for freeSlots = len(amphipod); freeSlots > 0; freeSlots-- {
-		if amphipod[freeSlots - 1] != roomType {
+		if amphipod[freeSlots-1] != roomType {
 			break
 		}
 	}
@@ -107,11 +107,11 @@ func (this Room) CanLeave(state RoomState) bool {
 }
 
 func (this Room) CanEnter(state RoomState) bool {
-	return int(state) >= this.freeSlots && int(state) < (this.freeSlots * 2)
+	return int(state) >= this.freeSlots && int(state) < (this.freeSlots*2)
 }
 
 func (this Room) IsFinal(state RoomState) bool {
-	return int(state) == this.freeSlots * 2
+	return int(state) == this.freeSlots*2
 }
 
 func (this Room) FinalState() RoomState {
@@ -125,7 +125,7 @@ func (this Room) LeaveDistance(state RoomState) int {
 
 func (this Room) EnterDistance(state RoomState) int {
 	// Assuming can enter. ie state in [freeSlots, freeSlots*2)
-	return this.freeSlots * 2 - int(state)
+	return this.freeSlots*2 - int(state)
 }
 
 func (this Room) Amphipod(state RoomState) Amphipod {
@@ -159,32 +159,31 @@ func (this Burrow) Draw(burrowState BurrowState) {
 	}
 	fmt.Print("\n")
 	/*
-	for pos, roomType := range this.hallway.roomType {
-		if roomType == Empty {
-			amphipod := burrowState.GetAmphipod(pos)
-			fmt.Printf("%c", amphipod.Display())
-		} else {
-			fmt.Print(".")
-		}
-	}
-	fmt.Print("\n")
-
-	for row := len(this.room[0].amphipod) - 1; row >= 0; row-- {
 		for pos, roomType := range this.hallway.roomType {
 			if roomType == Empty {
-				fmt.Print("#")
+				amphipod := burrowState.GetAmphipod(pos)
+				fmt.Printf("%c", amphipod.Display())
 			} else {
-				roomIndex := roomType.roomIndex()
-				roomState := burrowState.GetRoomState(pos)
-				fmt.Printf("%c", this.room[roomIndex].Draw(roomState, row))
+				fmt.Print(".")
 			}
 		}
 		fmt.Print("\n")
-	}
-	fmt.Print("\n")
+
+		for row := len(this.room[0].amphipod) - 1; row >= 0; row-- {
+			for pos, roomType := range this.hallway.roomType {
+				if roomType == Empty {
+					fmt.Print("#")
+				} else {
+					roomIndex := roomType.roomIndex()
+					roomState := burrowState.GetRoomState(pos)
+					fmt.Printf("%c", this.room[roomIndex].Draw(roomState, row))
+				}
+			}
+			fmt.Print("\n")
+		}
+		fmt.Print("\n")
 	*/
 }
-
 
 // #3210
 // #DCBA freeslots = 4
@@ -205,10 +204,10 @@ func (this Room) Draw(state RoomState, row int) Display {
 	xrow := len(this.amphipod) - row - 1
 
 	used := len(this.amphipod) - this.freeSlots - 1
-	if int(state) < used - row {
+	if int(state) < used-row {
 		return this.amphipod[xrow].Display()
 	}
-	if int(state) > used + row {
+	if int(state) > used+row {
 		return this.roomType.Display()
 	}
 	return '.'
@@ -236,7 +235,6 @@ func (this Room) Draw(state RoomState, row int) Display {
 	 10		hall
 */
 
-
 type Hallway struct {
 	roomType  []Amphipod
 	roomIndex []int
@@ -248,7 +246,7 @@ func NewHallway() Hallway {
 
 	// Rooms are at ..2.4.6.8..
 	for i := 0; i < 4; i++ {
-		roomType[i * 2 + 2] = Amber + Amphipod(i)
+		roomType[i*2+2] = Amber + Amphipod(i)
 	}
 
 	roomIndex, hallIndex := 0, 0
@@ -296,7 +294,7 @@ func (burrowState BurrowState) ClearAmpipod(position int) BurrowState {
 func (burrowState BurrowState) SetAmpipod(position int, amphipod Amphipod) BurrowState {
 	shift := position * 4
 	mask := BurrowState(0xf) << shift
-	return (burrowState & ^mask) | BurrowState(amphipod) << shift
+	return (burrowState & ^mask) | BurrowState(amphipod)<<shift
 }
 
 func (burrowState BurrowState) NextRoomState(position int) BurrowState {
@@ -335,10 +333,10 @@ func NewBurrow(filename string, isPart2 bool) Burrow {
 		amphipod[i] = []Amphipod{}
 	}
 
-	parseLine := func (line string) []byte {
+	parseLine := func(line string) []byte {
 		value := make([]byte, 4)
 		for i := 0; i < 4; i++ {
-			value[i] = line[i * 2 + 3]
+			value[i] = line[i*2+3]
 		}
 		return value
 	}
@@ -348,8 +346,8 @@ func NewBurrow(filename string, isPart2 bool) Burrow {
 
 	rows = append(rows, parseLine(lines[2]))
 	if isPart2 {
-		rows = append(rows, []byte{ 'D', 'C', 'B', 'A' })
-		rows = append(rows, []byte{ 'D', 'B', 'A', 'C' })
+		rows = append(rows, []byte{'D', 'C', 'B', 'A'})
+		rows = append(rows, []byte{'D', 'B', 'A', 'C'})
 	}
 	rows = append(rows, parseLine(lines[3]))
 
@@ -447,7 +445,7 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 
 	burrowState := path.burrowState.NextRoomState(pos)
 
-	toRoomPos   := amphipod.hallwayPos()
+	toRoomPos := amphipod.hallwayPos()
 	toRoomIndex := this.hallway.roomIndex[pos]
 	toRoomState := path.burrowState.GetRoomState(toRoomPos)
 
@@ -462,7 +460,7 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 			}
 			// We are in a hallway and we can stop here
 			next := burrowState.SetAmpipod(leftPos, amphipod)
-			burrowSolution.Add(next, path, amphipod.energy(dist + pos - leftPos))
+			burrowSolution.Add(next, path, amphipod.energy(dist+pos-leftPos))
 		} else if roomType == amphipod {
 			// This is our home room
 			toRoomState = path.burrowState.GetRoomState(leftPos)
@@ -473,7 +471,7 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 			}
 
 			next := burrowState.NextRoomState(leftPos)
-			burrowSolution.Add(next, path, amphipod.energy(dist + pos - leftPos + this.room[toRoomIndex].EnterDistance(toRoomState)))
+			burrowSolution.Add(next, path, amphipod.energy(dist+pos-leftPos+this.room[toRoomIndex].EnterDistance(toRoomState)))
 		}
 	}
 
@@ -486,7 +484,7 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 			}
 			// We are in a hallway and we can stop here
 			next := burrowState.SetAmpipod(rightPos, amphipod)
-			burrowSolution.Add(next, path, amphipod.energy(dist + rightPos - pos))
+			burrowSolution.Add(next, path, amphipod.energy(dist+rightPos-pos))
 		} else if roomType == amphipod {
 			// This is our home room
 			toRoomState = path.burrowState.GetRoomState(rightPos)
@@ -497,7 +495,7 @@ func (this Burrow) TryMoveFromRoom(burrowSolution *BurrowSolution, path *Path, p
 			}
 
 			next := burrowState.NextRoomState(rightPos)
-			burrowSolution.Add(next, path, amphipod.energy(dist + rightPos - pos + this.room[toRoomIndex].EnterDistance(toRoomState)))
+			burrowSolution.Add(next, path, amphipod.energy(dist+rightPos-pos+this.room[toRoomIndex].EnterDistance(toRoomState)))
 		}
 	}
 }
@@ -537,7 +535,7 @@ func sign(x int) int {
 
 type Path struct {
 	burrowState BurrowState
-	energy Energy
+	energy      Energy
 }
 
 func NewPath(burrowState BurrowState, energy Energy) Path {
@@ -546,7 +544,7 @@ func NewPath(burrowState BurrowState, energy Energy) Path {
 
 type BurrowSolution struct {
 	bestEnergy map[BurrowState]Energy
-	queue []*Path
+	queue      []*Path
 }
 
 func NewBurrowSolution() BurrowSolution {
@@ -649,12 +647,12 @@ func upheap(heap Heap, child int) {
 
 func downheap(heap Heap, parent int) {
 	for {
-		lchild := parent * 2 + 1
+		lchild := parent*2 + 1
 		if !heap.IsValid(lchild) {
 			return
 		}
 
-		rchild := parent * 2 + 2
+		rchild := parent*2 + 2
 		var child int
 		if !heap.IsValid(rchild) || heap.IsHigherPriority(lchild, rchild) {
 			child = lchild

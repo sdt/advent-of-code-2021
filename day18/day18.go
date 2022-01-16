@@ -20,7 +20,7 @@ func part1(lines []string) int {
 	accum := MakeTree(lines[0])
 	accum.Reduce()
 
-	for _, line := range lines[1:]  {
+	for _, line := range lines[1:] {
 		next := MakeTree(line)
 		next.Reduce()
 
@@ -31,7 +31,7 @@ func part1(lines []string) int {
 	return accum.Magnitude()
 }
 
-func part2(lines[] string) int {
+func part2(lines []string) int {
 	max := 0
 
 	for i, lhs := range lines {
@@ -68,32 +68,32 @@ const (
 )
 
 type Tree struct {
-	nodeType NodeType
-	value int
+	nodeType    NodeType
+	value       int
 	left, right *Tree
-	parent *Tree
+	parent      *Tree
 }
 
 func MakeTree(s string) *Tree {
 
-	var parseTree func (int, *Tree) (*Tree, int)
-	parseTree = func (offset int, parent *Tree) (*Tree, int) {
+	var parseTree func(int, *Tree) (*Tree, int)
+	parseTree = func(offset int, parent *Tree) (*Tree, int) {
 		//fmt.Printf("parseTree(%d) %s\n", offset, s[offset:])
-		if (s[offset] == '[') {
+		if s[offset] == '[' {
 			node := &Tree{nodeType: Node, parent: parent}
-			node.left, offset = parseTree(offset + 1, node)
-			if (s[offset] != ',') {
+			node.left, offset = parseTree(offset+1, node)
+			if s[offset] != ',' {
 				panic("Expected comma, got: " + s[offset:])
 			}
-			node.right, offset = parseTree(offset + 1, node)
-			if (s[offset] != ']') {
+			node.right, offset = parseTree(offset+1, node)
+			if s[offset] != ']' {
 				panic("Expected ], got: " + s[offset:])
 			}
-			return node, offset+1
+			return node, offset + 1
 		}
 		value := 0
 		for ; isDigit(s[offset]); offset++ {
-			value = value * 10 + int(s[offset] - '0')
+			value = value*10 + int(s[offset]-'0')
 		}
 		return &Tree{nodeType: Leaf, value: value, parent: parent}, offset
 	}
@@ -116,8 +116,8 @@ func (t *Tree) Reduce() {
 
 func (t *Tree) reduceStep() bool {
 
-	var explode func (*Tree, int) bool
-	explode = func (node *Tree, depth int) bool {
+	var explode func(*Tree, int) bool
+	explode = func(node *Tree, depth int) bool {
 		if node.IsLeaf() {
 			return false
 		}
@@ -134,8 +134,8 @@ func (t *Tree) reduceStep() bool {
 		return explode(node.right, depth+1)
 	}
 
-	var split func (*Tree, int) bool
-	split = func (node *Tree, depth int) bool {
+	var split func(*Tree, int) bool
+	split = func(node *Tree, depth int) bool {
 		if node.IsLeaf() {
 			if node.shouldSplit() {
 				node.split()
@@ -155,7 +155,7 @@ func (t *Tree) Magnitude() int {
 		return t.value
 	}
 
-	return 3 * t.left.Magnitude() + 2 * t.right.Magnitude()
+	return 3*t.left.Magnitude() + 2*t.right.Magnitude()
 }
 
 func (t *Tree) ToString() string {
@@ -166,7 +166,7 @@ func (t *Tree) ToString() string {
 }
 
 func (t *Tree) Add(other *Tree) *Tree {
-	root := &Tree{nodeType:Node, left: t, right: other}
+	root := &Tree{nodeType: Node, left: t, right: other}
 	root.left.parent = root
 	root.right.parent = root
 	return root
@@ -180,14 +180,14 @@ func (t *Tree) shouldSplit() bool {
 func (t *Tree) split() {
 	//fmt.Printf("Splitting: %s\n", t.ToString())
 	t.nodeType = Node
-	t.left  = &Tree{nodeType:Leaf, value:t.value / 2, parent: t}
-	t.right = &Tree{nodeType:Leaf, value:(t.value+1) / 2, parent: t}
+	t.left = &Tree{nodeType: Leaf, value: t.value / 2, parent: t}
+	t.right = &Tree{nodeType: Leaf, value: (t.value + 1) / 2, parent: t}
 	t.value = 0
 }
 
 func (t *Tree) explode() {
 	//fmt.Printf("Exploding: %s\n", t.ToString())
-	if ! (t.left.IsLeaf() && t.right.IsLeaf()) {
+	if !(t.left.IsLeaf() && t.right.IsLeaf()) {
 		panic("Trying to explode: " + t.ToString())
 	}
 
@@ -209,7 +209,7 @@ func (t *Tree) explodeLeft(value int) {
 		if t.isRightChild() {
 			//fmt.Printf("-- found junction: %s\n", t.parent.ToString())
 			t = t.parent.left
-			break;
+			break
 		}
 		t = t.parent
 	}
@@ -236,7 +236,7 @@ func (t *Tree) explodeRight(value int) {
 		if t.isLeftChild() {
 			//fmt.Printf("-- found junction: %s\n", t.parent.ToString())
 			t = t.parent.right
-			break;
+			break
 		}
 		t = t.parent
 	}

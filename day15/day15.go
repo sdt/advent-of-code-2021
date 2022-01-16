@@ -8,7 +8,7 @@ import (
 
 type Cavern struct {
 	rows, cols int
-	riskLevel []int	// this is (rows+2) * (cols+2) - sentinel border all around
+	riskLevel  []int // this is (rows+2) * (cols+2) - sentinel border all around
 }
 
 type Position struct {
@@ -34,7 +34,7 @@ func part1(cavern *Cavern) int {
 	w := cavern.cols + 2
 	h := cavern.rows + 2
 	start := w + 1
-	end := w * (h-1) - 2
+	end := w*(h-1) - 2
 
 	pathQueue := MakePathQueue()
 	pathQueue.Insert(MakePath(start, 0))
@@ -43,7 +43,7 @@ func part1(cavern *Cavern) int {
 
 	hDelta := 1
 	vDelta := cavern.cols + 2
-	deltas := [...]int{ hDelta, vDelta, -hDelta, -vDelta }
+	deltas := [...]int{hDelta, vDelta, -hDelta, -vDelta}
 
 	for {
 		path, ok := pathQueue.Remove()
@@ -83,25 +83,25 @@ func (c *Cavern) makeGrid(value int) []int {
 
 func (c *Cavern) index(row, col int) int {
 	// Take the borders into account here
-	return (row + 1) * (c.cols + 2) + col + 1
+	return (row+1)*(c.cols+2) + col + 1
 }
 
 func (c *Cavern) expand(factor int) Cavern {
 	rows := c.rows * factor
 	cols := c.cols * factor
-	riskLevel := make([]int, (rows + 2) * (cols + 2))
-	newCavern := Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
+	riskLevel := make([]int, (rows+2)*(cols+2))
+	newCavern := Cavern{rows: rows, cols: cols, riskLevel: riskLevel}
 
 	for row := 0; row < c.rows; row++ {
 		for col := 0; col < c.cols; col++ {
-			value := c.riskLevel[c.index(row, col)];
+			value := c.riskLevel[c.index(row, col)]
 			for drow := 0; drow < factor; drow++ {
 				for dcol := 0; dcol < factor; dcol++ {
 					dvalue := value + drow + dcol
 					if dvalue > 9 {
 						dvalue -= 9
 					}
-					index := newCavern.index(drow * c.rows + row, dcol * c.cols + col)
+					index := newCavern.index(drow*c.rows+row, dcol*c.cols+col)
 					newCavern.riskLevel[index] = dvalue
 				}
 			}
@@ -115,9 +115,9 @@ func parseCavern(lines []string) Cavern {
 	// Leave a one square border around each side
 	rows := len(lines)
 	cols := len(lines[0])
-	riskLevel := make([]int, (rows + 2) * (cols + 2))
+	riskLevel := make([]int, (rows+2)*(cols+2))
 
-	cavern := Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
+	cavern := Cavern{rows: rows, cols: cols, riskLevel: riskLevel}
 
 	for row, line := range lines {
 		for col, digit := range line {
@@ -126,7 +126,7 @@ func parseCavern(lines []string) Cavern {
 		}
 	}
 
-	return Cavern{rows:rows, cols:cols, riskLevel:riskLevel}
+	return Cavern{rows: rows, cols: cols, riskLevel: riskLevel}
 }
 
 func printGrid(rows, cols int, cell []int) {
@@ -189,11 +189,11 @@ func (this *PathQueue) Remove() (Path, bool) {
 		// Downheap
 		parent := 0
 		for {
-			lchild := parent * 2 + 1
+			lchild := parent*2 + 1
 			if lchild >= size {
 				break
 			}
-			rchild := parent * 2 + 2
+			rchild := parent*2 + 2
 
 			var child int
 			if rchild >= size {

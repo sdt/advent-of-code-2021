@@ -72,7 +72,7 @@ type Game2 struct {
 
 type Player2 struct {
 	position uint8
-	score uint8
+	score    uint8
 }
 
 type Scores struct {
@@ -83,14 +83,13 @@ func MakePlayer2(position uint8) Player2 {
 	return Player2{position: position, score: 0}
 }
 
-
 func MakeRolls() []Roll {
 	var hist [10]uint8
 
 	for i := 1; i <= 3; i++ {
 		for j := 1; j <= 3; j++ {
 			for k := 1; k <= 3; k++ {
-				hist[ i + j + k ]++
+				hist[i+j+k]++
 			}
 		}
 	}
@@ -98,7 +97,7 @@ func MakeRolls() []Roll {
 	rolls := make([]Roll, 0)
 	for score, count := range hist {
 		if count > 0 {
-			rolls = append(rolls, Roll{ uint8(score), count })
+			rolls = append(rolls, Roll{uint8(score), count})
 		}
 	}
 	return rolls
@@ -129,24 +128,24 @@ func TakeTurn(whichPlayer int, from Multiverse, rolls []Roll, scores *Scores) Mu
 	return to
 }
 
-func (this* Game2) NextGame(whichPlayer int, player Player2) Game2 {
+func (this *Game2) NextGame(whichPlayer int, player Player2) Game2 {
 	if whichPlayer == 0 {
-		return Game2{ player: [...]Player2{ player, this.player[1] } }
+		return Game2{player: [...]Player2{player, this.player[1]}}
 	} else {
-		return Game2{ player: [...]Player2{ this.player[0], player } }
+		return Game2{player: [...]Player2{this.player[0], player}}
 	}
 }
 
-func (this* Player2) Move(roll uint8) Player2 {
+func (this *Player2) Move(roll uint8) Player2 {
 	position := ((this.position + roll - 1) % 10) + 1
-	return Player2{ position: position, score: this.score + position }
+	return Player2{position: position, score: this.score + position}
 }
 
 //------------------------------------------------------------------------------
 
 type Player struct {
 	position int
-	score int
+	score    int
 }
 
 func MakePlayer(position int) Player {
@@ -166,9 +165,9 @@ func (this *Player) TakeTurn(dice *Dice) {
 //------------------------------------------------------------------------------
 
 type Dice struct {
-	sides int
+	sides   int
 	current int
-	rolls int
+	rolls   int
 }
 
 func MakeDice(sides int) Dice {

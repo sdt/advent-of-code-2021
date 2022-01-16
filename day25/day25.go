@@ -9,16 +9,16 @@ import (
 type Item uint8
 
 const (
-	Empty Item = '.'
-	East = '>'
-	South = 'v'
-	Leaving = 'o'
-	Entering = '*'
+	Empty    Item = '.'
+	East          = '>'
+	South         = 'v'
+	Leaving       = 'o'
+	Entering      = '*'
 )
 
 type Seafloor struct {
 	w, h int
-	pos []Item
+	pos  []Item
 }
 
 func NewSeafloor(filename string) Seafloor {
@@ -26,7 +26,7 @@ func NewSeafloor(filename string) Seafloor {
 
 	w := len(lines[0])
 	h := len(lines)
-	pos := make([]Item, w * h)
+	pos := make([]Item, w*h)
 
 	i := 0
 	for _, line := range lines {
@@ -107,7 +107,7 @@ func (this *Seafloor) Step() int {
 func (this *Seafloor) index(x, y int) int {
 	x %= this.w
 	y %= this.h
-	return y * this.w + x
+	return y*this.w + x
 }
 
 func main() {

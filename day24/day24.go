@@ -5,9 +5,9 @@ import (
 	"strconv"
 )
 
-var a = [...]Word{  1,  1,  1, 26,  1,  1, 26,  1,  1, 26, 26, 26, 26, 26 }
-var b = [...]Word{ 12, 11, 14, -6, 15, 12, -9, 14, 14, -5, -9, -5, -2, -7 }
-var c = [...]Word{  4, 10, 12, 14,  6, 16,  1,  7,  8, 11,  8,  3,  1,  8 }
+var a = [...]Word{1, 1, 1, 26, 1, 1, 26, 1, 1, 26, 26, 26, 26, 26}
+var b = [...]Word{12, 11, 14, -6, 15, 12, -9, 14, 14, -5, -9, -5, -2, -7}
+var c = [...]Word{4, 10, 12, 14, 6, 16, 1, 7, 8, 11, 8, 3, 1, 8}
 
 func main() {
 	lowest, highest := solve()
@@ -16,7 +16,7 @@ func main() {
 }
 
 func solve() (string, string) {
-	partials := []Partial{ Partial{} }
+	partials := []Partial{Partial{}}
 	from := 0
 	for {
 		size := chunkSize(from)
@@ -42,10 +42,10 @@ func chunkSize(from int) int {
 	}
 
 	i := 0
-	for a[from + i] == 1 {
+	for a[from+i] == 1 {
 		i++
 	}
-	return i+1
+	return i + 1
 }
 
 type Word int64
@@ -64,7 +64,7 @@ func pow(base, exponent int) int {
 
 type Partial struct {
 	input string
-	z Word
+	z     Word
 }
 
 func TestPrefixes(partial Partial, more int) []Partial {
@@ -83,7 +83,7 @@ func TestPrefixes(partial Partial, more int) []Partial {
 			z, keep = NativeChunk(input[k], a[k], b[k], c[k], z)
 		}
 		if keep {
-			out = append(out, Partial{ input: input, z: z })
+			out = append(out, Partial{input: input, z: z})
 			//fmt.Println(input, z)
 		}
 	}
@@ -92,8 +92,8 @@ func TestPrefixes(partial Partial, more int) []Partial {
 
 func NativeChunk(input byte, a, b, c, z Word) (Word, bool) {
 	w := Word(input - '0')
-	if z % 26 != w - b {
-		return (z / a) * 26 + w + c, false
+	if z%26 != w-b {
+		return (z/a)*26 + w + c, false
 	}
 	return z / a, true
 }
@@ -107,4 +107,3 @@ func convert(value Word, width int) string {
 	}
 	return string(number)
 }
-

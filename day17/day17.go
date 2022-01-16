@@ -22,7 +22,7 @@ func part1(t *Target) int {
 
 	highest := 0
 
-	for dx := mindx; dx < mindx + 10; dx++ {
+	for dx := mindx; dx < mindx+10; dx++ {
 		hits := 0
 		for dy := -450; dy < 450; dy++ {
 			p := MakeProjectile(dx, dy)
@@ -50,7 +50,7 @@ func part2(t *Target) int {
 
 	totalHits := 0
 
-	for dx := mindx-2; dx < 69+2; dx++ {
+	for dx := mindx - 2; dx < 69+2; dx++ {
 		hits := 0
 		for dy := -1550; dy < 1550; dy++ {
 			p := MakeProjectile(dx, dy)
@@ -79,7 +79,7 @@ func MinimumDX(t *Target) int {
 //------------------------------------------------------------------------------
 
 type Projectile struct {
-	x, y int
+	x, y   int
 	dx, dy int
 }
 
@@ -98,10 +98,10 @@ type Classification int
 
 const (
 	OnTarget Classification = 0
-	Above = 1
-	Below = 2
-	Left = 4
-	Right = 8
+	Above                   = 1
+	Below                   = 2
+	Left                    = 4
+	Right                   = 8
 )
 
 type Result int
@@ -119,7 +119,7 @@ func (this *Projectile) FireAt(t *Target) (bool, int) {
 		//fmt.Printf("%15v %04b\n", this, this.Classify(t))
 		if c == 0 {
 			return true, h
-		} else if (c & (Below|Right)) != 0 {
+		} else if (c & (Below | Right)) != 0 {
 			return false, h
 		}
 		this.Update()
