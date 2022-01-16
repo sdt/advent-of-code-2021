@@ -10,6 +10,7 @@ import (
 //------------------------------------------------------------------------------
 
 type Int int64
+
 const MaxInt = math.MaxInt64
 
 func (this Int) Abs() Int {
@@ -34,7 +35,7 @@ func (this Vec3) Add(that Vec3) Vec3 {
 }
 
 func (this Vec3) Dot(that Vec3) Int {
-	return this.x * that.x + this.y * that.y + this.z * that.z
+	return this.x*that.x + this.y*that.y + this.z*that.z
 }
 
 func (this Vec3) ManhattanMagnitude() Int {
@@ -63,14 +64,14 @@ func (this Vec3) Orientations() []Vec3 {
 //------------------------------------------------------------------------------
 
 type Cube struct {
-	pos Vec3
+	pos  Vec3
 	size Int
 }
 
 func (this *Cube) Corners() []Vec3 {
-	x0, x1 := this.pos.x, this.pos.x + this.size - 1
-	y0, y1 := this.pos.y, this.pos.y + this.size - 1
-	z0, z1 := this.pos.z, this.pos.z + this.size - 1
+	x0, x1 := this.pos.x, this.pos.x+this.size-1
+	y0, y1 := this.pos.y, this.pos.y+this.size-1
+	z0, z1 := this.pos.z, this.pos.z+this.size-1
 	return []Vec3{
 		Vec3{x0, y0, z0},
 		Vec3{x0, y0, z1},
@@ -155,15 +156,15 @@ func MinDistanceFromOrigin(x0, size Int) Int {
 
 func (this *Cube) MinDistance() Int {
 	return MinDistanceFromOrigin(this.pos.x, this.size) +
-	       MinDistanceFromOrigin(this.pos.y, this.size) +
-	       MinDistanceFromOrigin(this.pos.z, this.size)
+		MinDistanceFromOrigin(this.pos.y, this.size) +
+		MinDistanceFromOrigin(this.pos.z, this.size)
 }
 
 //------------------------------------------------------------------------------
 
 type Scanner struct {
 	pos Vec3
-	r Int
+	r   Int
 }
 
 func (this *Scanner) Contains(p Vec3) bool {
@@ -190,7 +191,7 @@ func NewScanner(line string) Scanner {
 
 	v := aoc.ParseInts(matches[1:])
 
-	pos := Vec3{Int(v[0]),Int(v[1]),Int(v[2])}
+	pos := Vec3{Int(v[0]), Int(v[1]), Int(v[2])}
 	r := Int(v[3])
 
 	return Scanner{pos, r}
@@ -221,8 +222,8 @@ func countScanners(scanners []Scanner, point Vec3) int {
 //------------------------------------------------------------------------------
 
 type Partial struct {
-	bbox Cube
-	insideScannerCount Int
+	bbox                Cube
+	insideScannerCount  Int
 	overlappingScanners []*Scanner
 }
 
@@ -277,7 +278,7 @@ func (this *Agenda) Next() (*Partial, bool) {
 
 	next := this.queue[0]
 	this.queue[0] = this.queue[len(this.queue)-1]
-	this.queue = this.queue[0:len(this.queue)-1]
+	this.queue = this.queue[0 : len(this.queue)-1]
 	downheap(this, 0)
 
 	return next, true
@@ -295,7 +296,7 @@ func (this *Agenda) IsHigherPriority(parent, child int) bool {
 	diff := p.PotentialCount() - c.PotentialCount()
 	if diff > 0 {
 		return true
-	} else if diff < 0{
+	} else if diff < 0 {
 		return false
 	}
 
@@ -339,13 +340,16 @@ func makeInitialCube(scanners []*Scanner) Cube {
 	for _, scanner := range scanners {
 		corners := scanner.Corners()
 		for _, corner := range corners {
-			for c := corner.x.Abs(); c > size; size *= 2 { }
-			for c := corner.y.Abs(); c > size; size *= 2 { }
-			for c := corner.z.Abs(); c > size; size *= 2 { }
+			for c := corner.x.Abs(); c > size; size *= 2 {
+			}
+			for c := corner.y.Abs(); c > size; size *= 2 {
+			}
+			for c := corner.z.Abs(); c > size; size *= 2 {
+			}
 		}
 	}
 
-	return Cube{Vec3{-size, -size, -size}, size*2}
+	return Cube{Vec3{-size, -size, -size}, size * 2}
 }
 
 //------------------------------------------------------------------------------
@@ -375,11 +379,13 @@ func part2(scanners []*Scanner) Int {
 	agenda := Agenda{[]*Partial{&partial}}
 
 	attempt := 0
+	completes := 0
 	var best *Partial = nil
 
 	for {
 		partial, found := agenda.Next()
 		if !found {
+			fmt.Printf("%d total attempts\n", attempt)
 			return best.MinDistance()
 		}
 
@@ -387,12 +393,13 @@ func part2(scanners []*Scanner) Int {
 		//fmt.Printf("Attempt %d: %v\n", attempt, partial)
 
 		if partial.IsComplete() {
+			completes++
 			if (best == nil) ||
-			    ((partial.insideScannerCount > best.insideScannerCount) &&
-				 (partial.MinDistance() < best.MinDistance())) {
+				((partial.insideScannerCount > best.insideScannerCount) &&
+					(partial.MinDistance() < best.MinDistance())) {
 				best = partial
 
-				//fmt.Printf("New best: scanners=%d dist=%d\n", best.insideScannerCount, best.MinDistance())
+				fmt.Printf("New best at %d/%d: scanners=%d dist=%d size=%d\n", attempt, completes, best.insideScannerCount, best.MinDistance(), best.bbox.size)
 			}
 		} else {
 			partials := partial.Split()
@@ -437,12 +444,12 @@ func upheap(heap Heap, child int) {
 
 func downheap(heap Heap, parent int) {
 	for {
-		lchild := parent * 2 + 1
+		lchild := parent*2 + 1
 		if !heap.IsValid(lchild) {
 			return
 		}
 
-		rchild := parent * 2 + 2
+		rchild := parent*2 + 2
 		var child int
 		if !heap.IsValid(rchild) || heap.IsHigherPriority(lchild, rchild) {
 			child = lchild
