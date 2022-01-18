@@ -5,9 +5,26 @@ import (
 	"strconv"
 )
 
-var a = [...]Word{1, 1, 1, 26, 1, 1, 26, 1, 1, 26, 26, 26, 26, 26}
-var b = [...]Word{12, 11, 14, -6, 15, 12, -9, 14, 14, -5, -9, -5, -2, -7}
-var c = [...]Word{4, 10, 12, 14, 6, 16, 1, 7, 8, 11, 8, 3, 1, 8}
+type Params struct {
+	a, b, c Word
+}
+
+var params = [...]Params{
+	Params{ 1, 12,  4},
+	Params{ 1, 11, 10},
+	Params{ 1, 14, 12},
+	Params{26, -6, 14},
+	Params{ 1, 15,  6},
+	Params{ 1, 12, 16},
+	Params{26, -9,  1},
+	Params{ 1, 14,  7},
+	Params{ 1, 14,  8},
+	Params{26, -5, 11},
+	Params{26, -9,  8},
+	Params{26, -5,  3},
+	Params{26, -2,  1},
+	Params{26, -7,  8},
+}
 
 func main() {
 	lowest, highest := solve()
@@ -37,12 +54,12 @@ func solve() (string, string) {
 }
 
 func chunkSize(from int) int {
-	if from == len(a) {
+	if from == len(params) {
 		return 0
 	}
 
 	i := 0
-	for a[from+i] == 1 {
+	for params[from+i].a == 1 {
 		i++
 	}
 	return i + 1
@@ -74,28 +91,28 @@ func TestPrefixes(partial Partial, more int) []Partial {
 	offset := len(partial.input)
 
 	for i := 0; i < count; i++ {
-		input := partial.input + convert(Word(i), more)
+		input := convert(Word(i), more)
 
 		keep := false
 		z := partial.z
 		for j := 0; j < more; j++ {
 			k := offset + j
-			z, keep = NativeChunk(input[k], a[k], b[k], c[k], z)
+			z, keep = NativeChunk(input[j], &params[k], z)
 		}
 		if keep {
-			out = append(out, Partial{input: input, z: z})
+			out = append(out, Partial{input: partial.input + input, z: z})
 			//fmt.Println(input, z)
 		}
 	}
 	return out
 }
 
-func NativeChunk(input byte, a, b, c, z Word) (Word, bool) {
+func NativeChunk(input byte, p *Params, z Word) (Word, bool) {
 	w := Word(input - '0')
-	if z%26 != w-b {
-		return (z/a)*26 + w + c, false
+	if z%26 != w-p.b {
+		return (z/p.a)*26 + w + p.c, false
 	}
-	return z / a, true
+	return z / p.a, true
 }
 
 func convert(value Word, width int) string {
