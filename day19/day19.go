@@ -89,16 +89,13 @@ func CompareScanners(s0, s1 Scanner) (Transform, bool) {
 			for _, p1 := range s1 {
 				p := p0.Sub(rot(p1))
 				if count, found := hist[p]; found {
+					if count == 11 {
+						return rot.MakeTransform(p), true
+					}
 					hist[p] = count + 1
 				} else {
 					hist[p] = 1
 				}
-			}
-		}
-
-		for offset, count := range hist {
-			if count >= 12 {
-				return rot.MakeTransform(offset), true
 			}
 		}
 	}
@@ -114,14 +111,14 @@ func CreateScannerTransforms(scanners []Scanner) []Transform {
 		unmapped[i] = i + 1
 	}
 
-	candidates := make([]int, 1)
-	candidates[0] = 0
+	candidates := []int{0}
 
 	for len(unmapped) > 0 {
+		//fmt.Printf("Unmapped=%d candidates=%d\n", len(unmapped), len(candidates))
 		from := candidates[0]
 		candidates = candidates[1:]
 
-		stillUnmapped := make([]int, 0)
+		stillUnmapped := make([]int, 0, len(unmapped))
 
 		for _, to := range unmapped {
 			if transform, found := CompareScanners(scanners[from], scanners[to]); found {
