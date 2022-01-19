@@ -85,9 +85,10 @@ func CompareScanners(s0, s1 Scanner) (Transform, bool) {
 
 	for _, rot := range rotations {
 		hist := make(Hist)
-		for _, p0 := range s0 {
-			for _, p1 := range s1 {
-				p := p0.Sub(rot(p1))
+		for _, p1 := range s1 {
+			rp1 := rot(p1)
+			for _, p0 := range s0 {
+				p := p0.Sub(rp1)
 				if count, found := hist[p]; found {
 					if count == 11 {
 						return rot.MakeTransform(p), true
